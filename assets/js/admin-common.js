@@ -122,4 +122,24 @@
 		} );
 	}
 
+	/**
+	 * Active-event switcher (appears on module pages).
+	 */
+	document.addEventListener( 'DOMContentLoaded', function () {
+		const select = document.getElementById( 'de-active-event-select' );
+		if ( ! select ) return;
+		select.addEventListener( 'change', function () {
+			const newId = select.value;
+			if ( ! newId ) return;
+			DE.api( 'digitone_events_event_set_active', { id: newId } )
+				.then( function () {
+					DE.feedback( 'Active event switched.', 'success' );
+					setTimeout( function () { window.location.reload(); }, 400 );
+				} )
+				.catch( function ( err ) {
+					DE.feedback( err.message || DE.i18n.error, 'error' );
+				} );
+		} );
+	} );
+
 } )();

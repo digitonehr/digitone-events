@@ -1,0 +1,23 @@
+/**
+ * DigitOne Events — Days module styles.
+ */
+.de-days-table .de-col-drag {
+	width: 28px;
+	text-align: center;
+}
+.de-days-table .de-drag-handle {
+	cursor: grab;
+	color: var(--de-color-muted);
+	user-select: none;
+	font-size: 14px;
+	letter-spacing: -2px;
+}
+.de-days-table .de-drag-handle:active {
+	cursor: grabbing;
+}
+.de-days-table tr.is-dragging {
+	opacity: 0.5;
+}
+.de-days-table tr.de-drop-target {
+	border-top: 2px solid var(--de-color-primary);
+}

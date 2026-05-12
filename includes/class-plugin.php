@@ -57,12 +57,16 @@ final class DigitOne_Events_Plugin {
 		$this->modules['events'] = new DigitOne_Events_Events_Module();
 		$this->modules['events']->register();
 
-		// Phase 2+ modules will be added here:
-		// $this->modules['days']     = new DigitOne_Events_Days_Module();
-		// $this->modules['venues']   = new DigitOne_Events_Venues_Module();
-		// $this->modules['speakers'] = new DigitOne_Events_Speakers_Module();
-		// $this->modules['sessions'] = new DigitOne_Events_Sessions_Module();
-		// etc.
+		$this->modules['days'] = new DigitOne_Events_Days_Module();
+		$this->modules['days']->register();
+
+		$this->modules['venues'] = new DigitOne_Events_Venues_Module();
+		$this->modules['venues']->register();
+
+		// Phase 3+ modules will be added here:
+		// $this->modules['speakers']      = new DigitOne_Events_Speakers_Module();
+		// $this->modules['sessions']      = new DigitOne_Events_Sessions_Module();
+		// $this->modules['session_types'] = new DigitOne_Events_Session_Types_Module();
 
 		do_action( 'digitone_events_modules_registered', $this->modules );
 	}

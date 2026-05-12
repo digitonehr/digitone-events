@@ -1,0 +1,16 @@
+/**
+ * DigitOne Events — Venues module styles.
+ */
+.de-venues-table th,
+.de-venues-table td {
+	vertical-align: middle;
+}
+.de-venues-table .de-venue-sub td {
+	background: #fafbfc;
+}
+.de-venues-table .de-sub-marker {
+	display: inline-block;
+	color: var(--de-color-muted);
+	margin-right: 6px;
+	font-family: monospace;
+}

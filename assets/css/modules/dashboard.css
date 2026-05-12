@@ -46,3 +46,22 @@
 	margin: 24px 0;
 	flex-wrap: wrap;
 }
+
+.digitone-events-dashboard .de-stat-link {
+	display: inline-block;
+	margin-top: 10px;
+	font-size: 12px;
+	color: var(--de-color-primary);
+	text-decoration: none;
+}
+.digitone-events-dashboard .de-stat-link:hover {
+	text-decoration: underline;
+}
+.digitone-events-dashboard .de-active-counts {
+	margin-left: 12px;
+	color: var(--de-color-text-soft);
+	font-size: 13px;
+}
+.digitone-events-dashboard .de-active-counts strong {
+	color: var(--de-color-text);
+}

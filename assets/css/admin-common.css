@@ -216,3 +216,61 @@
 .de-check-result.is-success { color: var(--de-color-success); }
 .de-check-result.is-warning { color: var(--de-color-warning); }
 .de-check-result.is-error   { color: var(--de-color-danger); }
+
+/* Active event bar (appears at top of module pages) */
+.de-active-event-bar {
+	background: var(--de-color-surface);
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius);
+	padding: 12px 18px;
+	margin: 16px 0 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	box-shadow: var(--de-shadow-card);
+}
+.de-active-event-info {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.de-active-event-label {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--de-color-text-soft);
+	font-weight: 600;
+}
+.de-active-event-name {
+	font-size: 15px;
+	color: var(--de-color-text);
+}
+.de-active-event-empty {
+	color: var(--de-color-warning);
+}
+.de-active-event-empty .dashicons {
+	color: var(--de-color-warning);
+}
+.de-active-event-select {
+	min-width: 220px;
+}
+
+/* Toolbar hint */
+.de-toolbar-hint {
+	font-size: 12px;
+	color: var(--de-color-text-soft);
+	font-style: italic;
+}
+
+/* Venue badges */
+.de-badge-primary {
+	background: #dbeafe;
+	color: #1e3a8a;
+}
+.de-badge-sub {
+	background: #f3e8ff;
+	color: #6b21a8;
+}

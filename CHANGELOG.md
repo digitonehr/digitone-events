@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-12
+
+### Added — Phase 2
+- **Days module**: full CRUD with create/edit modal, drag-to-reorder, bulk delete. Uses proper `DATE`/`TIME` columns. Cascade deletes sessions when a day is removed.
+- **Venues module**: full CRUD with parent/sub-venue hierarchy, modal with conditional parent selector, "Add sub-venue" shortcut from a primary venue row. Deleting a primary cascades to sub-venues; sessions referencing deleted venues have their references cleared.
+- Reusable **Active Event bar** partial that appears on every module page, with a switcher dropdown when more than one event exists.
+- Dashboard upgraded with stat cards for Events, Days, Venues plus a wide card showing active event with day/venue counts.
+
+### Changed
+- `class-admin-menu.php` now routes each submenu to its registered module's `render_page()` method, falling back to a "coming soon" notice for not-yet-shipped modules.
+- `assets/js/admin-common.js` gained an active-event switcher handler.
+
 ## [0.1.1] - 2026-05-12
 
 ### Fixed
