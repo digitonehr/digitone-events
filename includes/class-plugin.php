@@ -80,9 +80,12 @@ final class DigitOne_Events_Plugin {
 		$this->modules['sessions'] = new DigitOne_Events_Sessions_Module();
 		$this->modules['sessions']->register();
 
-		// Phase 5+ modules will be added here:
-		// $this->modules['export_import'] = new DigitOne_Events_Export_Import_Module();
-		// Frontend shortcodes will be registered here too.
+		$this->modules['export_import'] = new DigitOne_Events_Export_Import_Module();
+		$this->modules['export_import']->register();
+
+		// Shortcodes have no admin page; they just register frontend tags.
+		$this->modules['shortcodes'] = new DigitOne_Events_Shortcodes_Module();
+		$this->modules['shortcodes']->register();
 
 		do_action( 'digitone_events_modules_registered', $this->modules );
 	}

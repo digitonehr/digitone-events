@@ -17,6 +17,42 @@ final class DigitOne_Events_Assets {
 
 	public function register() : void {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+		add_action( 'wp_enqueue_scripts',    [ $this, 'enqueue_frontend' ] );
+	}
+
+	/**
+	 * Front-end: load frontend.css only when at least one DigitOne shortcode
+	 * is present in the page content. Avoids polluting every theme page.
+	 */
+	public function enqueue_frontend() : void {
+		if ( is_admin() ) {
+			return;
+		}
+		global $post;
+		if ( ! ( $post instanceof WP_Post ) ) {
+			return;
+		}
+		$tags = [
+			DigitOne_Events_Shortcodes_Module::TAG_AGENDA,
+			DigitOne_Events_Shortcodes_Module::TAG_SPEAKERS,
+			DigitOne_Events_Shortcodes_Module::TAG_VENUES,
+		];
+		$has_any = false;
+		foreach ( $tags as $tag ) {
+			if ( has_shortcode( $post->post_content, $tag ) ) {
+				$has_any = true;
+				break;
+			}
+		}
+		if ( ! $has_any ) {
+			return;
+		}
+		wp_enqueue_style(
+			'digitone-events-frontend',
+			DIGITONE_EVENTS_URL . 'assets/css/frontend.css',
+			[],
+			DIGITONE_EVENTS_VERSION
+		);
 	}
 
 	public function enqueue( string $hook ) : void {

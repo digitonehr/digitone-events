@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-12
+
+### Added — Phase 5 (feature complete)
+- **Export/Import module**: dedicated admin page under DigitOne Events → Export / Import.
+  - **JSON export**: complete round-trip snapshot of the active event including all days, venues (with hierarchy), titles, roles, speakers (with role assignments), session types, and sessions (with speaker assignments). Pretty-printed, UTF-8, single file.
+  - **CSV export**: zip containing one CSV per entity (event, days, venues, titles, roles, session_types, speakers, sessions, session_speakers). UTF-8 with BOM so Excel opens it correctly.
+  - **JSON import**: upload a previously exported JSON file → creates a brand new event with fresh UUIDs. All internal references (day_id, venue_id, parent_id, etc.) are automatically remapped via an old→new UUID table. Wrapped in a transaction; rolls back cleanly on any failure. Optional name override.
+  - File downloads use the WordPress `admin-post.php` flow with nonces (no raw exposure of admin-ajax for binary streaming).
+  - 10 MB upload limit; JSON-only validation.
+- **Frontend shortcodes**:
+  - `[digitone_events_agenda event="slug"]` — full agenda grouped by day, with session type badges, venue, speakers, role badges, child-session indentation.
+  - `[digitone_events_speakers event="slug"]` — responsive grid of speaker cards with photo, name, role badges, bio.
+  - `[digitone_events_venues event="slug"]` — venue list with sub-venues nested.
+  - Legacy attributes `event_slug=` and `event_id=` accepted as fallbacks.
+  - Frontend CSS (`assets/css/frontend.css`) is enqueued **only** on pages that actually contain one of these shortcodes (via `has_shortcode`).
+- Dashboard shows "Phase 5 — feature complete" with shortcode hint.
+
+### Notes
+- Only published events are rendered on the frontend. Drafts/archived are silently hidden.
+- The plugin now matches and exceeds the original DigiCal feature set with a far cleaner architecture, working GitHub auto-update, full security audit (consistent nonce + cap on every endpoint), and ~30% less code.
+
 ## [0.4.0] - 2026-05-12
 
 ### Added — Phase 4

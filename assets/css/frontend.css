@@ -1,0 +1,242 @@
+/**
+ * DigitOne Events — Frontend (shortcodes) styles.
+ * Scoped to .digitone-events-frontend so it never bleeds into the theme.
+ */
+.digitone-events-frontend {
+	--defe-text:        #1f2937;
+	--defe-text-soft:   #6b7280;
+	--defe-bg:          #ffffff;
+	--defe-bg-alt:      #f9fafb;
+	--defe-border:      #e5e7eb;
+	--defe-primary:     #2271b1;
+	--defe-radius:      8px;
+	--defe-shadow:      0 1px 3px rgba(0,0,0,0.05);
+	--defe-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+	font-family: var(--defe-font);
+	color: var(--defe-text);
+	line-height: 1.55;
+	max-width: 1024px;
+	margin: 0 auto;
+}
+.digitone-events-frontend * { box-sizing: border-box; }
+
+.de-fe-header {
+	margin-bottom: 28px;
+}
+.de-fe-title {
+	font-size: 28px;
+	margin: 0 0 6px;
+	color: var(--defe-text);
+}
+.de-fe-dates {
+	color: var(--defe-text-soft);
+	margin: 0 0 12px;
+	font-size: 14px;
+}
+.de-fe-description {
+	font-size: 15px;
+}
+.de-fe-empty,
+.de-fe-day-empty {
+	color: var(--defe-text-soft);
+	font-style: italic;
+	padding: 12px 0;
+}
+
+/* AGENDA */
+.de-fe-day {
+	margin-bottom: 28px;
+}
+.de-fe-day-title {
+	font-size: 18px;
+	margin: 0 0 12px;
+	padding-bottom: 6px;
+	border-bottom: 2px solid var(--defe-border);
+	color: var(--defe-text);
+}
+.de-fe-sessions {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.de-fe-session {
+	display: grid;
+	grid-template-columns: 110px 1fr;
+	gap: 16px;
+	padding: 14px 0;
+	border-bottom: 1px solid var(--defe-border);
+}
+.de-fe-session.is-child {
+	background: var(--defe-bg-alt);
+	padding-left: 24px;
+	border-left: 3px solid var(--defe-border);
+}
+.de-fe-session-time {
+	font-weight: 600;
+	color: var(--defe-text);
+	font-variant-numeric: tabular-nums;
+}
+.de-fe-session-title {
+	font-size: 16px;
+	margin: 0;
+	color: var(--defe-text);
+}
+.de-fe-session-headline {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-bottom: 4px;
+}
+.de-fe-type-badge {
+	display: inline-block;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 3px;
+	color: #fff;
+	background: var(--defe-text-soft);
+}
+.de-fe-session-venue {
+	color: var(--defe-text-soft);
+	font-size: 13px;
+	margin-top: 4px;
+}
+.de-fe-session-description {
+	margin-top: 6px;
+	font-size: 14px;
+}
+.de-fe-session-speakers {
+	list-style: none;
+	padding: 0;
+	margin: 8px 0 0;
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.de-fe-speaker-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+}
+.de-fe-speaker-avatar {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+.de-fe-role-badge {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	padding: 1px 6px;
+	border-radius: 8px;
+	color: #fff;
+	background: var(--defe-text-soft);
+}
+
+/* SPEAKERS GRID */
+.de-fe-speakers-grid {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 24px;
+}
+.de-fe-speaker-card {
+	background: var(--defe-bg);
+	border: 1px solid var(--defe-border);
+	border-radius: var(--defe-radius);
+	padding: 20px;
+	text-align: center;
+	box-shadow: var(--defe-shadow);
+}
+.de-fe-speaker-photo {
+	width: 120px;
+	height: 120px;
+	border-radius: 50%;
+	object-fit: cover;
+	margin: 0 auto 12px;
+	display: block;
+	background: var(--defe-bg-alt);
+}
+.de-fe-speaker-photo-empty {
+	background: var(--defe-bg-alt);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 48px;
+	color: var(--defe-text-soft);
+}
+.de-fe-speaker-card .de-fe-speaker-name {
+	font-weight: 600;
+	margin-bottom: 6px;
+}
+.de-fe-speaker-roles {
+	display: flex;
+	justify-content: center;
+	gap: 4px;
+	flex-wrap: wrap;
+	margin-bottom: 10px;
+}
+.de-fe-speaker-bio {
+	font-size: 13px;
+	color: var(--defe-text-soft);
+	margin-top: 8px;
+	text-align: left;
+}
+
+/* VENUES */
+.de-fe-venues-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.de-fe-venue {
+	margin-bottom: 20px;
+	padding: 18px;
+	background: var(--defe-bg);
+	border: 1px solid var(--defe-border);
+	border-radius: var(--defe-radius);
+}
+.de-fe-venue-name {
+	font-size: 18px;
+	margin: 0 0 8px;
+}
+.de-fe-venue-address {
+	color: var(--defe-text-soft);
+	font-style: normal;
+	margin-bottom: 10px;
+}
+.de-fe-subvenues {
+	list-style: none;
+	padding-left: 16px;
+	margin: 8px 0 0;
+	border-left: 2px solid var(--defe-border);
+}
+.de-fe-subvenue {
+	padding: 4px 0 4px 8px;
+	font-size: 14px;
+}
+.de-fe-subvenue-address {
+	color: var(--defe-text-soft);
+	margin-left: 8px;
+	font-size: 13px;
+}
+
+/* Not-found state */
+.digitone-events-notfound {
+	padding: 16px;
+	background: var(--defe-bg-alt);
+	border: 1px solid var(--defe-border);
+	border-radius: var(--defe-radius);
+	color: var(--defe-text-soft);
+}
+
+@media ( max-width: 600px ) {
+	.de-fe-session { grid-template-columns: 1fr; gap: 4px; }
+	.de-fe-session-time { font-size: 14px; }
+}

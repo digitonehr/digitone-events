@@ -103,6 +103,9 @@ $active_venue_count = ( $active_id && $venues_module ) ? $venues_module->repo()-
 		<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-sessions' ) ); ?>">
 			<?php esc_html_e( 'Manage sessions', 'digitone-events' ); ?>
 		</a>
+		<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-export-import' ) ); ?>">
+			<?php esc_html_e( 'Export / Import', 'digitone-events' ); ?>
+		</a>
 		<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-settings' ) ); ?>">
 			<?php esc_html_e( 'Settings', 'digitone-events' ); ?>
 		</a>
@@ -110,8 +113,8 @@ $active_venue_count = ( $active_id && $venues_module ) ? $venues_module->repo()-
 
 	<div class="notice notice-info inline">
 		<p>
-			<strong><?php esc_html_e( 'Phase 4', 'digitone-events' ); ?>:</strong>
-			<?php esc_html_e( 'Sessions and Session Types are now live. Export/Import and frontend shortcodes are coming in the final phase.', 'digitone-events' ); ?>
+			<strong><?php esc_html_e( 'Phase 5 — feature complete', 'digitone-events' ); ?>:</strong>
+			<?php esc_html_e( 'Export/Import and frontend shortcodes are now live. Use [digitone_events_agenda], [digitone_events_speakers] and [digitone_events_venues] in any page or post.', 'digitone-events' ); ?>
 		</p>
 	</div>
 </div>

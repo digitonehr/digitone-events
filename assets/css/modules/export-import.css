@@ -1,0 +1,50 @@
+/**
+ * DigitOne Events — Export/Import admin styles.
+ */
+.de-ei-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
+	margin: 20px 0;
+}
+@media ( max-width: 900px ) {
+	.de-ei-grid { grid-template-columns: 1fr; }
+}
+.de-ei-card {
+	background: var(--de-color-surface);
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius-lg);
+	padding: 24px;
+	box-shadow: var(--de-shadow-card);
+}
+.de-ei-card h2 {
+	margin-top: 0;
+	font-size: 18px;
+}
+.de-ei-buttons {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin: 16px 0;
+}
+.de-ei-format-notes {
+	margin-top: 24px;
+	padding: 12px 16px;
+	background: var(--de-color-surface);
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius);
+}
+.de-ei-format-notes summary {
+	cursor: pointer;
+	font-weight: 600;
+	color: var(--de-color-primary);
+}
+.de-ei-format-notes ul {
+	margin: 8px 0 8px 20px;
+	list-style: disc;
+}
+.de-ei-format-notes code {
+	background: var(--de-color-border-soft);
+	padding: 1px 6px;
+	border-radius: 3px;
+}
