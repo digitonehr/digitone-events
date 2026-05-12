@@ -21,33 +21,18 @@ final class DigitOne_Events_Assets {
 	}
 
 	/**
-	 * Front-end: load frontend.css only when at least one DigitOne shortcode
-	 * is present in the page content. Avoids polluting every theme page.
+	 * Front-end: register the stylesheet so shortcode handlers can enqueue it
+	 * on demand. We do NOT use has_shortcode() against $post->post_content
+	 * because block themes resolve shortcodes from template parts, blocks,
+	 * widgets, and patterns that aren't visible there. The shortcode handlers
+	 * themselves call wp_enqueue_style( 'digitone-events-frontend' ) so the
+	 * CSS loads exactly when (and only when) a shortcode actually renders.
 	 */
 	public function enqueue_frontend() : void {
 		if ( is_admin() ) {
 			return;
 		}
-		global $post;
-		if ( ! ( $post instanceof WP_Post ) ) {
-			return;
-		}
-		$tags = [
-			DigitOne_Events_Shortcodes_Module::TAG_AGENDA,
-			DigitOne_Events_Shortcodes_Module::TAG_SPEAKERS,
-			DigitOne_Events_Shortcodes_Module::TAG_VENUES,
-		];
-		$has_any = false;
-		foreach ( $tags as $tag ) {
-			if ( has_shortcode( $post->post_content, $tag ) ) {
-				$has_any = true;
-				break;
-			}
-		}
-		if ( ! $has_any ) {
-			return;
-		}
-		wp_enqueue_style(
+		wp_register_style(
 			'digitone-events-frontend',
 			DIGITONE_EVENTS_URL . 'assets/css/frontend.css',
 			[],
