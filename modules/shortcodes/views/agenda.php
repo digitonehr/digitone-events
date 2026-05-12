@@ -48,15 +48,10 @@ foreach ( $all_halls_order as $i => $hid ) {
 	$hall_col[ $hid ] = $i + 2;
 }
 
-// Choose default day: today's date if it matches one of the event days, else 0.
-$today        = current_time( 'Y-m-d' );
-$current_day  = 0;
-foreach ( $days as $i => $d ) {
-	if ( $d['day_date'] === $today ) {
-		$current_day = $i;
-		break;
-	}
-}
+// Initial active day defaults to first day. Browser-side JS will switch to
+// "today" if today's local date matches one of the event days. Doing this in JS
+// (not PHP) avoids server timezone and clock drift issues.
+$current_day = 0;
 
 $slot_minutes = 30;
 ?>
@@ -127,6 +122,7 @@ $slot_minutes = 30;
 			<section class="de-fe-schedule-day<?php echo $is_active ? ' is-active' : ''; ?>"
 				id="de-day-panel-<?php echo (int) $day_idx; ?>"
 				data-day-index="<?php echo (int) $day_idx; ?>"
+				data-day-date="<?php echo esc_attr( $day['day_date'] ); ?>"
 				role="tabpanel"
 				aria-hidden="<?php echo $is_active ? 'false' : 'true'; ?>">
 

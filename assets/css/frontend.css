@@ -209,8 +209,8 @@
 .de-fe-schedule-grid {
 	display: grid !important;
 	grid-template-columns: 70px repeat(var(--hall-count), minmax(200px, 1fr));
-	grid-template-rows: 48px;       /* explicit header row */
-	grid-auto-rows: 36px;            /* 30-min slot = 36px → 1h = 72px */
+	grid-template-rows: 48px;                /* explicit header row */
+	grid-auto-rows: minmax(44px, auto);      /* 30-min slot min 44px, grows to fit content; preserves time-proportionality at the minimum */
 	gap: 0;
 	background: var(--defe-bg);
 	border: 1px solid var(--defe-border);
@@ -318,10 +318,7 @@
 	font-weight: 600;
 	color: var(--defe-text);
 	line-height: 1.35;
-	display: -webkit-box;
-	-webkit-line-clamp: 3;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+	word-wrap: break-word;
 }
 .de-fe-block-time {
 	font-size: 11px;
@@ -332,11 +329,8 @@
 .de-fe-block-speakers {
 	font-size: 11px;
 	color: var(--defe-text-soft);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
+	line-height: 1.45;
+	word-wrap: break-word;
 }
 .de-fe-block-more {
 	color: var(--defe-text-muted);

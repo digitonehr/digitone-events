@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-05-12
+
+### Fixed
+- **Default day detection moved to JS** (uses browser's local date) so the picker no longer jumps to the wrong day due to server timezone misconfiguration or clock drift. PHP defaults to Day 1; JS upgrades to "today" only if it actually matches one of the event days.
+- **Grid rows now auto-size** via `grid-auto-rows: minmax(44px, auto)` — each row starts at 44px (preserving time-proportionality) and grows as needed to fit content. Long titles or speaker lists are no longer clipped.
+- Removed `-webkit-line-clamp` on session titles and speaker names so full content is always visible.
+
+### How initial day is picked now
+1. URL has `?de-day=N` or `#de-day-N` → that day wins
+2. Otherwise: browser's local date is compared against each day's `data-day-date` attribute — match wins
+3. Otherwise: Day 1 (set in PHP markup, so it's visible even before JS runs)
+
 ## [0.5.4] - 2026-05-12
 
 ### Changed
