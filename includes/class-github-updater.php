@@ -311,7 +311,12 @@ final class DigitOne_Events_Github_Updater {
 			return;
 		}
 
+		// Clear our own GitHub release cache AND the WP-level update_plugins
+		// transient. Without clearing the latter, WP keeps the stale "update
+		// available" row from before the upgrade, causing the user to have to
+		// click Update twice before the banner clears.
 		delete_transient( self::TRANSIENT_KEY );
+		delete_site_transient( 'update_plugins' );
 	}
 
 	/* ============================================================
@@ -329,12 +334,23 @@ final class DigitOne_Events_Github_Updater {
 			wp_send_json_error( [ 'message' => __( 'Could not reach GitHub or no releases found.', 'digitone-events' ) ] );
 		}
 
+		$is_newer   = version_compare( $release['version'], DIGITONE_EVENTS_VERSION, '>' );
+		$update_url = '';
+		if ( $is_newer ) {
+			// Direct deep-link to WP's plugin update screen — clicking starts the update immediately.
+			$update_url = wp_nonce_url(
+				self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . urlencode( DIGITONE_EVENTS_BASENAME ) ),
+				'upgrade-plugin_' . DIGITONE_EVENTS_BASENAME
+			);
+		}
+
 		wp_send_json_success( [
 			'latest'     => $release['version'],
 			'installed'  => DIGITONE_EVENTS_VERSION,
-			'is_newer'   => version_compare( $release['version'], DIGITONE_EVENTS_VERSION, '>' ),
+			'is_newer'   => $is_newer,
 			'html_url'   => $release['html_url'],
 			'zip_url'    => $release['zip_url'],
+			'update_url' => $update_url,
 		] );
 	}
 

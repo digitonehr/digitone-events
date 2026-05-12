@@ -98,9 +98,13 @@
 				.then( function ( data ) {
 					if ( data.is_newer ) {
 						out.className = 'de-check-result is-success';
-						out.innerHTML = '🆕 v' + escapeHtml( data.latest ) +
-							' available (installed v' + escapeHtml( data.installed ) +
-							'). <a href="' + escapeHtml( data.html_url ) + '" target="_blank" rel="noopener">View release</a>';
+						let html = '🆕 v' + escapeHtml( data.latest ) +
+							' available (installed v' + escapeHtml( data.installed ) + '). ';
+						if ( data.update_url ) {
+							html += '<a class="button button-primary de-update-now" href="' + escapeHtml( data.update_url ) + '">Update now</a> ';
+						}
+						html += '<a href="' + escapeHtml( data.html_url ) + '" target="_blank" rel="noopener">View release</a>';
+						out.innerHTML = html;
 					} else {
 						out.className = 'de-check-result is-warning';
 						out.textContent = '✓ You are on the latest version (v' + data.installed + ').';

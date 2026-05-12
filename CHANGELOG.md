@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-05-12
+
+### Fixed
+- **Plugin update no longer requires two clicks.** After a successful update of DigitOne Events, the WP-level `update_plugins` site transient is now invalidated in addition to our own GitHub release cache. Previously only our cache was cleared, leaving WP showing a stale "update available" banner that needed a second update click to disappear.
+- **Day picker initial state is now bulletproof.** The frontend JS unconditionally calls `show(selectedIdx)` after determining the right day, so any stale `is-active` classes in the HTML (e.g. due to a partial plugin update where new CSS hadn't loaded yet) are forcibly normalised.
+
+### Added
+- **"Update now" button after Force Check GitHub.** When Settings → Force Check finds a newer release, the result message now includes a direct **Update now** button that deep-links to WP's plugin upgrade screen with a valid nonce. No more navigating to Plugins → Update.
+
 ## [0.5.5] - 2026-05-12
 
 ### Fixed

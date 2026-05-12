@@ -274,3 +274,10 @@
 	background: #f3e8ff;
 	color: #6b21a8;
 }
+
+
+/* Update Now button next to force-check result */
+.de-update-now {
+	margin: 0 8px 0 4px !important;
+	vertical-align: baseline;
+}
