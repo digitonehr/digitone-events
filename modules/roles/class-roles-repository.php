@@ -1,0 +1,111 @@
+<?php
+/**
+ * Roles repository.
+ *
+ * @package DigitOne_Events
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+final class DigitOne_Events_Roles_Repository {
+
+	private function table() : string {
+		return DigitOne_Events_Database_Schema::table( 'roles' );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	public function all_for_event( string $event_id ) : array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$this->table()} WHERE event_id = %s ORDER BY sort_order ASC, name ASC",
+				$event_id
+			),
+			ARRAY_A
+		);
+		return is_array( $rows ) ? $rows : [];
+	}
+
+	public function find( string $id ) : ?array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare( "SELECT * FROM {$this->table()} WHERE id = %s", $id ),
+			ARRAY_A
+		);
+		return $row ?: null;
+	}
+
+	public function count_for_event( string $event_id ) : int {
+		global $wpdb;
+		return (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$this->table()} WHERE event_id = %s", $event_id )
+		);
+	}
+
+	/**
+	 * Validate that all given role IDs belong to the given event.
+	 *
+	 * @param string[] $ids
+	 * @return string[] Valid IDs only.
+	 */
+	public function filter_valid_ids( array $ids, string $event_id ) : array {
+		if ( empty( $ids ) ) {
+			return [];
+		}
+		global $wpdb;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%s' ) );
+		$params = array_merge( [ $event_id ], $ids );
+		$valid  = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT id FROM {$this->table()} WHERE event_id = %s AND id IN ({$placeholders})",
+				...$params
+			)
+		);
+		return is_array( $valid ) ? $valid : [];
+	}
+
+	public function save( array $data ) : ?string {
+		global $wpdb;
+		$id       = isset( $data['id'] ) && $data['id'] !== '' ? (string) $data['id'] : '';
+		$is_new   = $id === '';
+		$event_id = isset( $data['event_id'] ) ? (string) $data['event_id'] : '';
+		$name     = isset( $data['name'] ) ? trim( (string) $data['name'] ) : '';
+		if ( $event_id === '' || $name === '' ) {
+			return null;
+		}
+
+		$color = isset( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : null;
+
+		$row = [
+			'event_id'   => $event_id,
+			'name'       => $name,
+			'color'      => $color,
+			'sort_order' => isset( $data['sort_order'] ) ? (int) $data['sort_order'] : 0,
+		];
+		$formats = [ '%s', '%s', '%s', '%d' ];
+
+		if ( $is_new ) {
+			$row['id'] = DigitOne_Events_Helpers_Format::uuid();
+			$formats[] = '%s';
+			$ok = $wpdb->insert( $this->table(), $row, $formats );
+			return $ok ? $row['id'] : null;
+		}
+
+		$ok = $wpdb->update( $this->table(), $row, [ 'id' => $id ], $formats, [ '%s' ] );
+		return $ok !== false ? $id : null;
+	}
+
+	public function delete( string $id ) : bool {
+		global $wpdb;
+		if ( ! $this->find( $id ) ) {
+			return false;
+		}
+		// Clean junction rows.
+		$junction = DigitOne_Events_Database_Schema::table( 'speakers_roles' );
+		$wpdb->delete( $junction, [ 'role_id' => $id ], [ '%s' ] );
+		$session_roles = DigitOne_Events_Database_Schema::table( 'session_roles' );
+		$wpdb->update( $session_roles, [ 'role_id' => null ], [ 'role_id' => $id ], [ '%s' ], [ '%s' ] );
+
+		return (bool) $wpdb->delete( $this->table(), [ 'id' => $id ], [ '%s' ] );
+	}
+}

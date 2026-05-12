@@ -1,0 +1,159 @@
+/**
+ * DigitOne Events — Speakers module styles.
+ */
+
+/* Tabs panel */
+.de-tab-panel {
+	background: var(--de-color-surface);
+	border: 1px solid var(--de-color-border-soft);
+	border-top: 0;
+	padding: 18px 20px;
+	border-radius: 0 0 var(--de-radius) var(--de-radius);
+}
+.de-tab-section {
+	max-width: 1200px;
+}
+.de-tab-section-narrow {
+	max-width: 720px;
+}
+.de-section-header {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+.de-section-header .de-search {
+	flex: 1;
+	min-width: 240px;
+}
+
+/* Speaker thumbnail */
+.de-col-photo {
+	width: 60px;
+}
+.de-speaker-thumb {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	object-fit: cover;
+	background: var(--de-color-border-soft);
+	display: inline-block;
+	text-align: center;
+	line-height: 40px;
+	font-size: 22px;
+	color: var(--de-color-muted);
+}
+.de-speaker-thumb-empty {
+	background: var(--de-color-border-soft);
+}
+
+/* Role badges */
+.de-role-badge {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	background: var(--de-color-border-soft);
+	color: var(--de-color-text);
+	margin: 2px 4px 2px 0;
+}
+
+/* Wide modal */
+.de-modal-wide {
+	max-width: 720px;
+}
+
+/* Photo picker */
+.de-photo-picker {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.de-photo-picker .de-photo-url {
+	flex: 1;
+	min-width: 220px;
+}
+.de-photo-preview {
+	margin-top: 8px;
+}
+.de-photo-preview img {
+	max-width: 120px;
+	max-height: 120px;
+	border-radius: var(--de-radius);
+	border: 1px solid var(--de-color-border-soft);
+}
+
+/* Roles checkboxes */
+.de-roles-checkboxes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+	padding: 10px;
+	background: #fafafa;
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius);
+}
+.de-role-checkbox {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+}
+
+/* Inline add for titles/roles tabs */
+.de-inline-add {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin: 14px 0;
+	padding: 12px;
+	background: #fafafa;
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius);
+}
+.de-inline-add input[type="text"] {
+	flex: 1;
+}
+.de-inline-add input[type="color"] {
+	width: 44px;
+	height: 36px;
+	padding: 2px;
+	border: 1px solid var(--de-color-border);
+	border-radius: var(--de-radius);
+	cursor: pointer;
+}
+
+/* Inline edit for titles/roles tables */
+.de-titles-table .de-col-actions,
+.de-roles-table .de-col-actions {
+	width: 280px;
+}
+.de-roles-table .de-col-color {
+	width: 80px;
+}
+.de-edit-cell .de-edit-input {
+	width: 100%;
+	max-width: 320px;
+}
+.de-color-swatch {
+	display: inline-block;
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	border: 1px solid var(--de-color-border-soft);
+	vertical-align: middle;
+}
+.de-edit-color {
+	width: 44px;
+	height: 28px;
+	padding: 1px;
+	border: 1px solid var(--de-color-border);
+	cursor: pointer;
+}
+
+.de-muted {
+	color: var(--de-color-muted);
+}

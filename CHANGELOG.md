@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-12
+
+### Added — Phase 3
+- **Speakers module**: full CRUD with photo upload via the WordPress Media Library (`wp.media`), title selection, multi-role assignment via the `speakers_roles` junction table, email validation, and bio with `wp_kses_post` sanitization. Roles are validated against the active event to prevent cross-event assignment.
+- **Titles module**: lightweight taxonomy (e.g. Dr., Prof., Mr.). Managed inline from the Speakers admin page (Titles tab) with quick-add + inline edit.
+- **Roles module**: taxonomy with optional color per role (e.g. Keynote Speaker → blue, Moderator → green). Managed inline from the Speakers admin page (Roles tab). Colors are rendered as badges in the speakers list.
+- Speakers admin page now uses WordPress tab navigation (`nav-tab-wrapper`) with three tabs: Speakers / Titles / Roles.
+- Dashboard now shows a Speakers count card.
+
+### Changed
+- Cascade delete: removing a title nulls `speakers.title_id`; removing a role drops all junction rows and nulls `session_roles.role_id`; removing a speaker drops all their junction rows.
+
 ## [0.2.0] - 2026-05-12
 
 ### Added — Phase 2

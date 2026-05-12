@@ -11,10 +11,12 @@ $plugin       = DigitOne_Events_Plugin::instance();
 $events_repo  = $plugin->module( 'events' )->repo();
 $days_module  = $plugin->module( 'days' );
 $venues_module = $plugin->module( 'venues' );
+$speakers_module = $plugin->module( 'speakers' );
 
-$event_count = $events_repo->count_all();
-$day_count   = $days_module ? $days_module->repo()->count_all() : 0;
-$venue_count = $venues_module ? $venues_module->repo()->count_all() : 0;
+$event_count   = $events_repo->count_all();
+$day_count     = $days_module     ? $days_module->repo()->count_all()     : 0;
+$venue_count   = $venues_module   ? $venues_module->repo()->count_all()   : 0;
+$speaker_count = $speakers_module ? $speakers_module->repo()->count_all() : 0;
 
 $active_id = DigitOne_Events_Helpers_Event_Context::active_event_id();
 $active    = $active_id ? $events_repo->find( $active_id ) : null;
@@ -44,6 +46,12 @@ $active_venue_count = ( $active_id && $venues_module ) ? $venues_module->repo()-
 			<div class="de-stat-num"><?php echo esc_html( $venue_count ); ?></div>
 			<div class="de-stat-label"><?php esc_html_e( 'Venues', 'digitone-events' ); ?></div>
 			<a class="de-stat-link" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-venues' ) ); ?>"><?php esc_html_e( 'Manage →', 'digitone-events' ); ?></a>
+		</div>
+
+		<div class="de-stat-card">
+			<div class="de-stat-num"><?php echo esc_html( $speaker_count ); ?></div>
+			<div class="de-stat-label"><?php esc_html_e( 'Speakers', 'digitone-events' ); ?></div>
+			<a class="de-stat-link" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-speakers' ) ); ?>"><?php esc_html_e( 'Manage →', 'digitone-events' ); ?></a>
 		</div>
 
 		<div class="de-stat-card de-stat-card-wide">
@@ -81,6 +89,9 @@ $active_venue_count = ( $active_id && $venues_module ) ? $venues_module->repo()-
 		<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-venues' ) ); ?>">
 			<?php esc_html_e( 'Manage venues', 'digitone-events' ); ?>
 		</a>
+		<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-speakers' ) ); ?>">
+			<?php esc_html_e( 'Manage speakers', 'digitone-events' ); ?>
+		</a>
 		<a class="button button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=digitone-events-settings' ) ); ?>">
 			<?php esc_html_e( 'Settings', 'digitone-events' ); ?>
 		</a>
@@ -88,8 +99,8 @@ $active_venue_count = ( $active_id && $venues_module ) ? $venues_module->repo()-
 
 	<div class="notice notice-info inline">
 		<p>
-			<strong><?php esc_html_e( 'Phase 2', 'digitone-events' ); ?>:</strong>
-			<?php esc_html_e( 'Days and Venues modules are now live. Speakers, Sessions, Session Types and Export/Import are coming in upcoming phases.', 'digitone-events' ); ?>
+			<strong><?php esc_html_e( 'Phase 3', 'digitone-events' ); ?>:</strong>
+			<?php esc_html_e( 'Speakers, Titles and Roles are now live. Sessions, Session Types and Export/Import are coming in upcoming phases.', 'digitone-events' ); ?>
 		</p>
 	</div>
 </div>

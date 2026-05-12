@@ -63,8 +63,17 @@ final class DigitOne_Events_Plugin {
 		$this->modules['venues'] = new DigitOne_Events_Venues_Module();
 		$this->modules['venues']->register();
 
-		// Phase 3+ modules will be added here:
-		// $this->modules['speakers']      = new DigitOne_Events_Speakers_Module();
+		// Titles + Roles must register BEFORE speakers (speakers reads from their repos).
+		$this->modules['titles'] = new DigitOne_Events_Titles_Module();
+		$this->modules['titles']->register();
+
+		$this->modules['roles'] = new DigitOne_Events_Roles_Module();
+		$this->modules['roles']->register();
+
+		$this->modules['speakers'] = new DigitOne_Events_Speakers_Module();
+		$this->modules['speakers']->register();
+
+		// Phase 4+ modules will be added here:
 		// $this->modules['sessions']      = new DigitOne_Events_Sessions_Module();
 		// $this->modules['session_types'] = new DigitOne_Events_Session_Types_Module();
 
