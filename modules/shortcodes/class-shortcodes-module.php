@@ -48,10 +48,16 @@ final class DigitOne_Events_Shortcodes_Module {
 		foreach ( $days as $d ) {
 			$sessions_by_day[ $d['id'] ] = $plugin->module( 'sessions' )->repo()->all_for_day( $d['id'] );
 		}
+
+		// Optional title_suffix shortcode attribute. Default "Programme".
+		// Empty string disables the document.title swap entirely.
+		$atts_norm = shortcode_atts( [ 'title_suffix' => 'Programme' ], (array) $atts, 'digitone_events_agenda' );
+
 		return $this->capture( 'modules/shortcodes/views/agenda', [
 			'event'           => $event,
 			'days'            => $days,
 			'sessions_by_day' => $sessions_by_day,
+			'title_suffix'    => $atts_norm['title_suffix'],
 		] );
 	}
 

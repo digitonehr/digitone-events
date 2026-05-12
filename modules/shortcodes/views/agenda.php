@@ -57,7 +57,8 @@ $slot_minutes = 30;
 ?>
 <div class="digitone-events-frontend digitone-events-schedule"
 	data-event-slug="<?php echo esc_attr( $event['slug'] ); ?>"
-	data-initial-day="<?php echo (int) $current_day; ?>">
+	data-event-name="<?php echo esc_attr( $event['name'] ); ?>"
+	data-title-suffix="<?php echo esc_attr( $title_suffix ?? 'Programme' ); ?>">
 
 	<header class="de-fe-header">
 		<h2 class="de-fe-title"><?php echo esc_html( $event['name'] ); ?></h2>

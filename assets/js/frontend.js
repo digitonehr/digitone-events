@@ -1,24 +1,17 @@
 /**
- * DigitOne Events — Frontend day switcher.
+ * DigitOne Events — Frontend day switcher + tab title swap.
  *
- * Initial active day priority:
+ * Initial active day:
  *   1. URL ?de-day=N or #de-day-N
- *   2. Browser's local date matches a panel's data-day-date
- *   3. First day (always falls through to this)
+ *   2. Otherwise: Day 1 (always)
  *
- * JS always normalises state at the end, so even if multiple panels had
- * is-active in the HTML (which shouldn't happen) the correct single one wins.
+ * Document title:
+ *   Set to "<event-name> <suffix>" (default suffix = "Programme") from
+ *   data-event-name and data-title-suffix attributes on the schedule wrapper.
+ *   Empty suffix disables the title swap.
  */
 ( function () {
 	'use strict';
-
-	function localDateYMD() {
-		const d = new Date();
-		const y = d.getFullYear();
-		const m = String( d.getMonth() + 1 ).padStart( 2, '0' );
-		const day = String( d.getDate() ).padStart( 2, '0' );
-		return y + '-' + m + '-' + day;
-	}
 
 	function init( schedule ) {
 		const buttons = schedule.querySelectorAll( '.de-fe-day-nav-item' );
@@ -45,10 +38,8 @@
 			} );
 		} );
 
-		// Determine initial selection. Default = first day, then override.
+		// Initial selection. Default = Day 1.
 		let selectedIdx = 0;
-
-		// 1. URL override.
 		try {
 			const url = new URL( window.location.href );
 			const queryDay = parseInt( url.searchParams.get( 'de-day' ), 10 );
@@ -58,29 +49,30 @@
 				const hashMatch = window.location.hash.match( /^#de-day-(\d+)$/ );
 				if ( hashMatch ) {
 					const idx = parseInt( hashMatch[1], 10 );
-					if ( idx >= 0 && idx < panels.length ) {
-						selectedIdx = idx;
-					}
-				} else {
-					// 2. Match today's local date.
-					const today = localDateYMD();
-					for ( let i = 0; i < panels.length; i++ ) {
-						if ( panels[i].getAttribute( 'data-day-date' ) === today ) {
-							selectedIdx = i;
-							break;
-						}
-					}
+					if ( idx >= 0 && idx < panels.length ) selectedIdx = idx;
 				}
 			}
-		} catch ( e ) {
-			// Stay on selectedIdx = 0
-		}
+		} catch ( e ) { /* stay on 0 */ }
 
-		// 3. Always apply final selection (defensive — overrides any stale HTML state).
+		// Always apply final selection — overrides any stale HTML state.
 		show( selectedIdx );
 	}
 
+	function swapTitle( schedule ) {
+		const eventName = schedule.getAttribute( 'data-event-name' );
+		if ( ! eventName ) return;
+		// title-suffix attribute lets the shortcode customise or disable the swap.
+		// Missing attribute → default "Programme". Empty string → don't swap.
+		let suffix = schedule.getAttribute( 'data-title-suffix' );
+		if ( suffix === null ) suffix = 'Programme';
+		if ( suffix === '' ) return;
+		document.title = eventName + ' — ' + suffix;
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
-		document.querySelectorAll( '.digitone-events-schedule' ).forEach( init );
+		document.querySelectorAll( '.digitone-events-schedule' ).forEach( function ( schedule ) {
+			swapTitle( schedule );
+			init( schedule );
+		} );
 	} );
 } )();

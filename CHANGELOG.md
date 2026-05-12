@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2026-05-12
+
+### Changed
+- **Day picker now always opens on Day 1 by default.** Removed the today-matching logic that was causing edge-case landings on Day 2 or Day 3. Day picker buttons still let you switch days manually with a click. Deep-link override via `?de-day=N` URL parameter or `#de-day-N` hash still works.
+
+### Added
+- **Browser tab title swap.** When the agenda shortcode renders, the browser tab title is updated to `<event-name> — <suffix>` where `<suffix>` defaults to `Programme`. For the IAAS 2026 event this displays as **"16th International Congress on Ambulatory Surgery, 2026 — Programme"** (or whatever the event name is in your site).
+- New `title_suffix` shortcode attribute lets you customise or disable the swap:
+  - `[digitone_events_agenda event="iaas-2026"]` → "<event> — Programme" (default)
+  - `[digitone_events_agenda event="iaas-2026" title_suffix="Schedule"]` → "<event> — Schedule"
+  - `[digitone_events_agenda event="iaas-2026" title_suffix=""]` → keeps the WP page title (no swap)
+
+### Notes
+- Title swap happens on the client side (via JS) so it works regardless of which page builder rendered the shortcode. The HTML `<title>` in source remains whatever WP/the theme generated; only the live browser tab and bookmarks are updated.
+- The "Update now" button after Force Check GitHub (added in 0.5.6) is already in your installed version of `admin-common.js`. If you don't see it, your browser is caching the old admin JS — hard-refresh `/wp-admin/admin.php?page=digitone-events-settings` with Ctrl+F5 / Cmd+Shift+R.
+
 ## [0.5.6] - 2026-05-12
 
 ### Fixed
