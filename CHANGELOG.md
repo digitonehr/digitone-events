@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2026-05-12
+
+### Fixed
+- **Persistent "Update available" banner after upgrading.** The `on_upgrade_complete` hook only handled the `$hook_extra['plugins']` key (bulk updates) and silently skipped single-plugin updates which use `$hook_extra['plugin']` (singular). Result: the `update_plugins` site transient was never invalidated for the most common upgrade path, so WP kept showing "There is a new version available" pointing at the version you just installed. Now both keys are handled, and `wp_clean_plugins_cache(true)` is called too to flush every related cache.
+- **"Update now" button gave "Link has expired" or did nothing.** `wp_nonce_url()` HTML-escapes the URL (`&` → `&amp;`). After passing through JSON to JS and being inserted via `escapeHtml`, the URL was double-escaped, so the browser navigated to `update.php?action=upgrade-plugin&amp;plugin=…&amp;_wpnonce=…`. WP's PHP saw query params named `amp;plugin` and `amp;_wpnonce` instead of `plugin` and `_wpnonce` → the nonce check failed with "Link has expired". The URL is now built with `add_query_arg()` + `wp_create_nonce()` directly (no HTML escaping involved), so the parameter names arrive intact and the nonce validates.
+
 ## [0.5.7] - 2026-05-12
 
 ### Changed

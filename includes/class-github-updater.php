@@ -307,16 +307,28 @@ final class DigitOne_Events_Github_Updater {
 		if ( ( $hook_extra['type'] ?? '' ) !== 'plugin' ) {
 			return;
 		}
-		if ( empty( $hook_extra['plugins'] ) || ! in_array( DIGITONE_EVENTS_BASENAME, (array) $hook_extra['plugins'], true ) ) {
+		// WP fires this hook with either 'plugin' (single update) OR 'plugins'
+		// (bulk update). Earlier versions of this method only handled bulk,
+		// which is why the "Update available" banner kept reappearing after a
+		// regular single-plugin upgrade.
+		$plugins = [];
+		if ( isset( $hook_extra['plugins'] ) && is_array( $hook_extra['plugins'] ) ) {
+			$plugins = $hook_extra['plugins'];
+		} elseif ( isset( $hook_extra['plugin'] ) && is_string( $hook_extra['plugin'] ) ) {
+			$plugins = [ $hook_extra['plugin'] ];
+		}
+		if ( ! in_array( DIGITONE_EVENTS_BASENAME, $plugins, true ) ) {
 			return;
 		}
 
-		// Clear our own GitHub release cache AND the WP-level update_plugins
-		// transient. Without clearing the latter, WP keeps the stale "update
-		// available" row from before the upgrade, causing the user to have to
-		// click Update twice before the banner clears.
+		// Clear our own GitHub release cache, the WP update_plugins transient,
+		// and the plugins API/file cache. Without these, WP keeps showing the
+		// stale "update available" row from before the upgrade.
 		delete_transient( self::TRANSIENT_KEY );
 		delete_site_transient( 'update_plugins' );
+		if ( function_exists( 'wp_clean_plugins_cache' ) ) {
+			wp_clean_plugins_cache( true );
+		}
 	}
 
 	/* ============================================================
@@ -338,9 +350,16 @@ final class DigitOne_Events_Github_Updater {
 		$update_url = '';
 		if ( $is_newer ) {
 			// Direct deep-link to WP's plugin update screen — clicking starts the update immediately.
-			$update_url = wp_nonce_url(
-				self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . urlencode( DIGITONE_EVENTS_BASENAME ) ),
-				'upgrade-plugin_' . DIGITONE_EVENTS_BASENAME
+			// IMPORTANT: build with add_query_arg + wp_create_nonce, NOT wp_nonce_url.
+			// wp_nonce_url HTML-escapes "&" to "&amp;", which gets double-escaped again
+			// once JS sets it as an href, breaking the param parser ("amp;plugin=...").
+			$update_url = add_query_arg(
+				[
+					'action'   => 'upgrade-plugin',
+					'plugin'   => DIGITONE_EVENTS_BASENAME,
+					'_wpnonce' => wp_create_nonce( 'upgrade-plugin_' . DIGITONE_EVENTS_BASENAME ),
+				],
+				self_admin_url( 'update.php' )
 			);
 		}
 
