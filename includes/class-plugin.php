@@ -73,9 +73,16 @@ final class DigitOne_Events_Plugin {
 		$this->modules['speakers'] = new DigitOne_Events_Speakers_Module();
 		$this->modules['speakers']->register();
 
-		// Phase 4+ modules will be added here:
-		// $this->modules['sessions']      = new DigitOne_Events_Sessions_Module();
-		// $this->modules['session_types'] = new DigitOne_Events_Session_Types_Module();
+		// Session Types must register BEFORE sessions (sessions reads from its repo).
+		$this->modules['session_types'] = new DigitOne_Events_Session_Types_Module();
+		$this->modules['session_types']->register();
+
+		$this->modules['sessions'] = new DigitOne_Events_Sessions_Module();
+		$this->modules['sessions']->register();
+
+		// Phase 5+ modules will be added here:
+		// $this->modules['export_import'] = new DigitOne_Events_Export_Import_Module();
+		// Frontend shortcodes will be registered here too.
 
 		do_action( 'digitone_events_modules_registered', $this->modules );
 	}

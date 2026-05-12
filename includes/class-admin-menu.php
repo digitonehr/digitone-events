@@ -59,9 +59,8 @@ final class DigitOne_Events_Admin_Menu {
 			'digitone-events-days'          => [ 'label' => __( 'Days',           'digitone-events' ), 'module' => 'days' ],
 			'digitone-events-venues'        => [ 'label' => __( 'Venues',         'digitone-events' ), 'module' => 'venues' ],
 			'digitone-events-speakers'      => [ 'label' => __( 'Speakers',       'digitone-events' ), 'module' => 'speakers' ],
-			'digitone-events-sessions'      => [ 'label' => __( 'Sessions',       'digitone-events' ), 'module' => 'sessions' ],
-			'digitone-events-session-types' => [ 'label' => __( 'Session Types',  'digitone-events' ), 'module' => 'session_types' ],
-			'digitone-events-export-import' => [ 'label' => __( 'Export / Import','digitone-events' ), 'module' => 'export_import' ],
+			'digitone-events-sessions'      => [ 'label' => __( 'Sessions',        'digitone-events' ), 'module' => 'sessions' ],
+			'digitone-events-export-import' => [ 'label' => __( 'Export / Import', 'digitone-events' ), 'module' => 'export_import' ],
 		];
 		foreach ( $module_pages as $slug => $cfg ) {
 			$module_slug = $cfg['module'];

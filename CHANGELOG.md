@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-12
+
+### Added — Phase 4
+- **Sessions module**: full CRUD with rich edit modal:
+  - Day picker at top of list (URL-controlled, switches whole view)
+  - Day, start time, end time, title (required)
+  - Session type dropdown with icon + color badge in list
+  - Cascading Venue → Sub-venue dropdowns (sub-venue auto-filtered to selected parent venue's children)
+  - Multi-checkbox speakers with a single role applied to all selected
+  - Session level (master vs child) with parent-session dropdown loaded via AJAX when day changes
+  - Description with `wp_kses_post`
+- **Session Types module**: managed inline on the Sessions admin page (Session Types tab). Each type has a name, icon (emoji or short text) and color. Inline edit + quick-add form.
+- Sessions list shows time, title (with sub-marker for child sessions), type badge, venue/sub-venue, and speakers with their role badges.
+- Dashboard now shows a Sessions count card.
+
+### Changed
+- Autoloader now handles multi-word module directory names (e.g. `modules/session-types/`) by trying longest-prefix matches.
+- "Session Types" removed from the top-level submenu — now lives as a tab on the Sessions page.
+
+### Cascade behavior
+- Deleting a session type nulls `sessions.session_type_id`.
+- Deleting a session removes its `session_roles` junction rows and promotes any child sessions referencing it to master.
+
 ## [0.3.0] - 2026-05-12
 
 ### Added — Phase 3

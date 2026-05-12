@@ -1,0 +1,96 @@
+/**
+ * DigitOne Events — Sessions module styles.
+ */
+
+.de-day-picker-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin-right: 12px;
+}
+.de-day-picker {
+	min-width: 220px;
+}
+
+.de-sessions-table .de-col-time {
+	width: 130px;
+	font-variant-numeric: tabular-nums;
+}
+.de-sessions-table th,
+.de-sessions-table td {
+	vertical-align: middle;
+}
+.de-sessions-table tr[data-level="child"] td {
+	background: #fafbfc;
+}
+
+/* Session type badge */
+.de-type-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	background: var(--de-color-border-soft);
+	color: var(--de-color-text);
+}
+
+/* Speakers cell */
+.de-session-speakers {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.de-session-speaker {
+	font-size: 13px;
+}
+.de-role-badge-mini {
+	font-size: 10px;
+	padding: 1px 6px;
+	margin-left: 4px;
+}
+
+/* Speaker selection list */
+.de-speakers-checkboxes {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 6px 12px;
+	padding: 10px;
+	background: #fafafa;
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius);
+	max-height: 180px;
+	overflow-y: auto;
+}
+.de-speaker-checkbox {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+}
+
+/* Session types tab */
+.de-session-types-table .de-col-icon {
+	width: 60px;
+}
+.de-session-types-table .de-col-color {
+	width: 80px;
+}
+.de-session-types-table .de-col-actions {
+	width: 280px;
+}
+.de-icon-display {
+	font-size: 18px;
+}
+.de-icon-input {
+	max-width: 60px;
+}
+.de-edit-icon {
+	max-width: 60px;
+}
+
+/* Inline edit support (shared with speakers tabs) */
+.de-edit-cell .de-edit-input {
+	width: 100%;
+	max-width: 320px;
+}
