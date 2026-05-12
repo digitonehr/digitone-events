@@ -1,35 +1,35 @@
 /**
- * DigitOne Events — Frontend stylesheet for shortcodes.
+ * DigitOne Events — Frontend stylesheet (v0.5.2 — time-grid schedule).
  *
- * All rules are tightly scoped under .digitone-events-frontend to avoid
- * leaking into themes, but use !important defensively where typical block
- * themes (Twenty Twenty-Three / Five, Astra, etc.) heavily override basic
- * elements like ul/li/h2/h3.
+ * Scoped under .digitone-events-frontend with defensive resets against
+ * heavy-handed block themes.
  */
 
 /* ============================================================ */
-/* SCOPED RESET — neutralize aggressive theme styling           */
+/* SCOPED RESET                                                 */
 /* ============================================================ */
 .digitone-events-frontend {
-	--defe-text:        #111827;
-	--defe-text-soft:   #6b7280;
-	--defe-text-muted:  #9ca3af;
+	--defe-text:        #0f172a;
+	--defe-text-soft:   #475569;
+	--defe-text-muted:  #94a3b8;
 	--defe-bg:          #ffffff;
-	--defe-bg-alt:      #f9fafb;
-	--defe-bg-soft:     #f3f4f6;
-	--defe-border:      #e5e7eb;
-	--defe-border-soft: #f3f4f6;
-	--defe-primary:     #2271b1;
+	--defe-bg-alt:      #f8fafc;
+	--defe-bg-soft:     #f1f5f9;
+	--defe-bg-dark:     #0f172a;
+	--defe-bg-dark-2:   #1e293b;
+	--defe-border:      #e2e8f0;
+	--defe-border-soft: #f1f5f9;
+	--defe-primary:     #2563eb;
 	--defe-accent:      #8b5cf6;
-	--defe-radius:      10px;
+	--defe-radius:      12px;
 	--defe-radius-sm:   6px;
-	--defe-shadow:      0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
-	--defe-shadow-lg:   0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.04);
+	--defe-shadow:      0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);
+	--defe-shadow-lg:   0 10px 25px -5px rgba(15,23,42,0.08), 0 4px 6px -2px rgba(15,23,42,0.05);
 
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 	color: var(--defe-text);
-	line-height: 1.6;
-	max-width: 1100px;
+	line-height: 1.55;
+	max-width: 1280px;
 	margin: 0 auto;
 	padding: 0;
 }
@@ -40,7 +40,7 @@
 	box-sizing: border-box;
 }
 
-/* Aggressive list reset — themes love adding bullets and numbers back */
+/* Aggressive list reset */
 .digitone-events-frontend ul,
 .digitone-events-frontend ol {
 	list-style: none !important;
@@ -58,18 +58,16 @@
 	display: none !important;
 }
 
-/* Headings inside the shortcode: defang theme overrides */
 .digitone-events-frontend h2 {
-	font-size: 2rem !important;
-	font-weight: 700 !important;
-	line-height: 1.2 !important;
-	margin: 0 0 8px !important;
+	font-size: 2.25rem !important;
+	font-weight: 800 !important;
+	line-height: 1.1 !important;
+	margin: 0 0 12px !important;
 	padding: 0 !important;
 	color: var(--defe-text) !important;
 	border: 0 !important;
-	letter-spacing: -0.01em;
+	letter-spacing: -0.025em;
 }
-
 .digitone-events-frontend p {
 	margin: 0 0 12px;
 	padding: 0;
@@ -77,7 +75,7 @@
 .digitone-events-frontend a {
 	color: var(--defe-primary);
 	text-decoration: underline;
-	text-decoration-color: rgba(34, 113, 177, 0.3);
+	text-decoration-color: rgba(37, 99, 235, 0.3);
 	text-underline-offset: 2px;
 }
 .digitone-events-frontend a:hover {
@@ -85,214 +83,355 @@
 }
 
 /* ============================================================ */
-/* HEADER (event name + dates + description)                    */
+/* HEADER                                                       */
 /* ============================================================ */
 .de-fe-header {
-	margin-bottom: 32px;
+	margin-bottom: 28px;
 	padding-bottom: 24px;
-	border-bottom: 2px solid var(--defe-border);
-}
-.de-fe-title {
-	margin: 0 0 8px !important;
+	border-bottom: 1px solid var(--defe-border);
 }
 .de-fe-dates {
 	color: var(--defe-text-soft);
 	font-size: 15px;
 	font-weight: 500;
 	margin: 0 0 16px;
+	font-variant-numeric: tabular-nums;
 }
 .de-fe-description {
 	color: var(--defe-text);
 	font-size: 15px;
-	max-width: 720px;
-}
-.de-fe-description p {
-	margin: 0 0 8px;
-}
-.de-fe-description p:last-child {
-	margin-bottom: 0;
+	max-width: 760px;
 }
 
-/* Empty states */
 .de-fe-empty,
 .de-fe-day-empty {
 	color: var(--defe-text-muted);
 	font-style: italic;
-	padding: 16px 0;
+	padding: 20px;
 	margin: 0;
-}
-
-/* ============================================================ */
-/* DAY GROUPING                                                 */
-/* ============================================================ */
-.de-fe-day {
-	margin-bottom: 40px;
-}
-.de-fe-day-title {
-	font-size: 1.25rem !important;
-	font-weight: 700 !important;
-	line-height: 1.3 !important;
-	margin: 0 0 16px !important;
-	padding: 10px 16px !important;
-	color: #fff !important;
-	background: linear-gradient(135deg, #2271b1 0%, #135e96 100%);
+	text-align: center;
+	background: var(--defe-bg-alt);
 	border-radius: var(--defe-radius);
-	letter-spacing: 0.01em;
-	display: block;
 }
 
 /* ============================================================ */
-/* SESSIONS LIST — cards in a stack                             */
+/* DAY NAV (anchor pills at the top)                            */
 /* ============================================================ */
-.de-fe-sessions {
+.de-fe-day-nav {
 	display: flex !important;
+	gap: 8px;
+	margin: 0 0 32px;
+	overflow-x: auto;
+	padding-bottom: 4px;
+	-webkit-overflow-scrolling: touch;
+}
+.de-fe-day-nav-item {
+	display: inline-flex !important;
 	flex-direction: column;
-	gap: 10px;
+	align-items: flex-start;
+	padding: 10px 18px;
+	background: var(--defe-bg-alt);
+	border: 1px solid var(--defe-border);
+	border-radius: var(--defe-radius);
+	text-decoration: none !important;
+	color: var(--defe-text);
+	transition: all 0.15s ease;
+	white-space: nowrap;
+	min-width: 130px;
+}
+.de-fe-day-nav-item:hover {
+	background: var(--defe-bg);
+	border-color: var(--defe-primary);
+	transform: translateY(-1px);
+	box-shadow: var(--defe-shadow);
+	text-decoration: none !important;
+}
+.de-fe-day-nav-item .de-fe-day-num {
+	font-size: 11px;
+	font-weight: 700;
+	color: var(--defe-primary);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.de-fe-day-nav-item .de-fe-day-date {
+	font-size: 14px;
+	font-weight: 600;
+	margin-top: 2px;
+	color: var(--defe-text);
 }
 
-.de-fe-session {
+/* ============================================================ */
+/* DAY SECTION                                                  */
+/* ============================================================ */
+.de-fe-schedule-day {
+	margin-bottom: 56px;
+	scroll-margin-top: 20px;
+}
+
+.de-fe-day-header {
+	display: flex !important;
+	align-items: baseline;
+	gap: 16px;
+	margin-bottom: 20px;
+	padding: 16px 20px;
+	background: var(--defe-bg-dark);
+	color: #fff;
+	border-radius: var(--defe-radius);
+	flex-wrap: wrap;
+}
+.de-fe-day-header-num {
+	font-size: 11px;
+	font-weight: 700;
+	color: #93c5fd;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+}
+.de-fe-day-header-date {
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #fff;
+	letter-spacing: -0.01em;
+}
+.de-fe-day-header-extra {
+	font-size: 14px;
+	color: #cbd5e1;
+	margin-left: auto;
+}
+
+/* ============================================================ */
+/* TIME-GRID SCHEDULE                                           */
+/* ============================================================ */
+.de-fe-schedule-grid {
 	display: grid !important;
-	grid-template-columns: 96px 1fr;
-	gap: 18px;
-	padding: 16px 18px;
+	grid-template-columns: 70px repeat(var(--hall-count), minmax(180px, 1fr));
+	grid-auto-rows: 18px; /* 30-min slot = 18px → 1h = 36px */
+	gap: 0;
 	background: var(--defe-bg);
 	border: 1px solid var(--defe-border);
 	border-radius: var(--defe-radius);
-	box-shadow: var(--defe-shadow);
-	transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-.de-fe-session:hover {
-	box-shadow: var(--defe-shadow-lg);
-	border-color: #d1d5db;
+	overflow: hidden;
+	position: relative;
 }
 
-/* Child / parallel sessions */
-.de-fe-session.is-child {
+/* Top-left empty cell */
+.de-fe-grid-corner {
 	background: var(--defe-bg-alt);
-	margin-left: 32px;
-	border-left: 3px solid var(--defe-primary);
+	border-right: 1px solid var(--defe-border);
+	border-bottom: 1px solid var(--defe-border);
 }
 
-/* Time column */
-.de-fe-session-time {
-	color: var(--defe-text);
-	font-weight: 600;
+/* Hall headers — sticky to top within the grid */
+.de-fe-grid-hall {
+	background: var(--defe-bg-alt);
+	border-right: 1px solid var(--defe-border);
+	border-bottom: 1px solid var(--defe-border);
+	padding: 10px 14px;
+	font-weight: 700;
 	font-size: 13px;
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0;
-	padding-top: 2px;
-	white-space: nowrap;
-}
-
-/* Body column */
-.de-fe-session-body {
-	min-width: 0;
-}
-.de-fe-session-headline {
+	color: var(--defe-text);
+	text-align: center;
+	letter-spacing: 0.02em;
+	min-height: 40px;
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	flex-wrap: wrap;
-	margin-bottom: 4px;
+	justify-content: center;
 }
-.de-fe-session-title {
-	font-size: 1rem;
-	font-weight: 600;
-	line-height: 1.4;
-	color: var(--defe-text);
-	margin: 0;
-	padding: 0;
-	flex: 1;
-	min-width: 200px;
+.de-fe-grid-hall:last-child {
+	border-right: 0;
 }
 
-/* Type badge — small colored pill */
-.de-fe-type-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
+/* Time labels (left column) */
+.de-fe-grid-time {
+	border-right: 1px solid var(--defe-border);
 	font-size: 11px;
-	font-weight: 600;
-	padding: 3px 9px;
-	border-radius: 12px;
-	color: #fff;
-	background: var(--defe-text-soft);
-	letter-spacing: 0.02em;
-	text-transform: none;
-	white-space: nowrap;
-	line-height: 1.4;
-}
-
-/* Venue line */
-.de-fe-session-venue {
-	color: var(--defe-text-soft);
-	font-size: 13px;
-	margin-top: 4px;
-	display: flex;
-	align-items: center;
-	gap: 4px;
-}
-
-/* Description */
-.de-fe-session-description {
-	margin-top: 8px;
-	padding: 10px 12px;
-	background: var(--defe-bg-soft);
-	border-radius: var(--defe-radius-sm);
-	font-size: 13.5px;
-	color: var(--defe-text);
-	line-height: 1.5;
-}
-.de-fe-session-description p {
-	margin: 0 0 6px;
-}
-.de-fe-session-description p:last-child {
-	margin-bottom: 0;
-}
-
-/* Speakers — compact inline pills */
-.de-fe-session-speakers {
-	display: flex !important;
-	flex-wrap: wrap;
-	gap: 6px 10px;
-	margin-top: 10px !important;
-}
-.de-fe-speaker-item {
-	display: inline-flex !important;
-	align-items: center;
-	gap: 6px;
-	padding: 3px 10px 3px 3px;
-	background: var(--defe-bg-soft);
-	border-radius: 16px;
-	font-size: 12.5px;
-	color: var(--defe-text);
-}
-.de-fe-speaker-avatar {
-	width: 22px;
-	height: 22px;
-	border-radius: 50%;
-	object-fit: cover;
-	flex-shrink: 0;
-	background: var(--defe-border);
-}
-.de-fe-speaker-name {
 	font-weight: 500;
-	white-space: nowrap;
+	color: var(--defe-text-muted);
+	font-variant-numeric: tabular-nums;
+	padding: 0 8px;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-end;
+	position: relative;
 }
-.de-fe-role-badge {
-	display: inline-block;
-	font-size: 10px;
+.de-fe-grid-time.is-hour::after {
+	content: "";
+	position: absolute;
+	left: 100%;
+	right: -100vw;
+	top: 0;
+	border-top: 1px dashed var(--defe-border);
+	pointer-events: none;
+	z-index: 0;
+}
+.de-fe-grid-time.is-hour {
+	color: var(--defe-text-soft);
 	font-weight: 600;
-	padding: 1px 7px;
-	border-radius: 8px;
-	color: #fff;
-	background: var(--defe-text-soft);
-	letter-spacing: 0.02em;
+}
+
+/* Session blocks */
+.de-fe-block {
+	position: relative;
+	background: var(--defe-bg);
+	border-left: 3px solid var(--type-color, var(--defe-text-muted));
+	border-radius: 6px;
+	margin: 2px 4px 2px 4px;
+	padding: 6px 10px 6px 10px;
+	overflow: hidden;
+	z-index: 1;
+	transition: transform 0.12s ease, box-shadow 0.12s ease;
+	box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-size: 12px;
+	line-height: 1.35;
+}
+.de-fe-block::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: var(--type-color, #6b7280);
+	opacity: 0.06;
+	pointer-events: none;
+}
+.de-fe-block:hover {
+	transform: translateY(-1px);
+	box-shadow: var(--defe-shadow);
+	z-index: 2;
+}
+
+.de-fe-block-type {
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--type-color, var(--defe-text-muted));
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.de-fe-block-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--defe-text);
+	line-height: 1.3;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+.de-fe-block-time {
+	font-size: 10.5px;
+	color: var(--defe-text-soft);
+	font-variant-numeric: tabular-nums;
+	margin-top: auto;
+}
+.de-fe-block-speakers {
+	font-size: 10.5px;
+	color: var(--defe-text-soft);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+.de-fe-block-more {
+	color: var(--defe-text-muted);
+	font-weight: 600;
+}
+
+/* Break blocks span all halls — different styling, gray ribbon */
+.de-fe-block.is-break {
+	border-left: 0;
+	background: var(--defe-bg-soft);
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 4px 14px;
+	font-size: 11.5px;
+	color: var(--defe-text-soft);
+	border-radius: 6px;
+}
+.de-fe-block.is-break::before {
+	display: none;
+}
+.de-fe-block.is-break .de-fe-block-type {
+	color: var(--defe-text-soft);
+}
+.de-fe-block.is-break .de-fe-block-title {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--defe-text);
+	-webkit-line-clamp: 1;
+}
+.de-fe-block.is-break .de-fe-block-time {
+	margin-top: 0;
+}
+.de-fe-block.is-break .de-fe-block-speakers {
+	display: none;
 }
 
 /* ============================================================ */
-/* SPEAKERS GRID (separate shortcode)                           */
+/* MOBILE FALLBACK (list view under 800px)                      */
+/* ============================================================ */
+.de-fe-mobile-list {
+	display: none !important;
+}
+
+@media ( max-width: 800px ) {
+	.de-fe-schedule-grid {
+		display: none !important;
+	}
+	.de-fe-mobile-list {
+		display: flex !important;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.de-fe-mobile-item {
+		display: grid !important;
+		grid-template-columns: 80px 1fr;
+		gap: 12px;
+		padding: 12px 14px;
+		background: var(--defe-bg);
+		border: 1px solid var(--defe-border);
+		border-left: 3px solid var(--type-color, var(--defe-text-muted));
+		border-radius: var(--defe-radius-sm);
+	}
+	.de-fe-mobile-time {
+		font-size: 12px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--defe-text);
+		padding-top: 2px;
+	}
+	.de-fe-mobile-type {
+		display: inline-block;
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--type-color, var(--defe-text-muted));
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		margin-bottom: 2px;
+	}
+	.de-fe-mobile-title {
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--defe-text);
+		line-height: 1.35;
+	}
+	.de-fe-mobile-venue {
+		font-size: 12px;
+		color: var(--defe-text-soft);
+		margin-top: 2px;
+	}
+	.de-fe-day-header-date {
+		font-size: 1.25rem;
+	}
+}
+
+/* ============================================================ */
+/* SPEAKERS SHORTCODE                                            */
 /* ============================================================ */
 .digitone-events-speakers .de-fe-speakers-grid {
 	display: grid !important;
@@ -344,6 +483,17 @@
 	flex-wrap: wrap;
 	margin-bottom: 12px;
 }
+.de-fe-role-badge {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 8px;
+	color: #fff;
+	background: var(--defe-text-soft);
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+}
 .de-fe-speaker-bio {
 	font-size: 13px;
 	color: var(--defe-text-soft);
@@ -353,7 +503,7 @@
 }
 
 /* ============================================================ */
-/* VENUES                                                        */
+/* VENUES SHORTCODE                                              */
 /* ============================================================ */
 .digitone-events-venues .de-fe-venues-list {
 	margin-top: 24px !important;
@@ -406,37 +556,10 @@
 	font-size: 13px;
 }
 
-/* Not-found state */
 .digitone-events-notfound {
 	padding: 16px 20px;
 	background: var(--defe-bg-alt);
 	border: 1px solid var(--defe-border);
 	border-radius: var(--defe-radius);
 	color: var(--defe-text-soft);
-}
-
-/* ============================================================ */
-/* Responsive                                                    */
-/* ============================================================ */
-@media ( max-width: 600px ) {
-	.de-fe-session {
-		grid-template-columns: 1fr !important;
-		gap: 6px;
-		padding: 14px 16px;
-	}
-	.de-fe-session-time {
-		font-size: 12px;
-		color: var(--defe-text-soft);
-	}
-	.de-fe-session.is-child {
-		margin-left: 16px;
-	}
-	.de-fe-day-title {
-		font-size: 1.1rem !important;
-		padding: 8px 14px !important;
-	}
-	.digitone-events-speakers .de-fe-speakers-grid {
-		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-		gap: 14px;
-	}
 }

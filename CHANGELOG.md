@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-05-12
+
+### Changed
+- **Agenda shortcode redesigned as a true time-grid schedule** (ICFP-style). Sessions now render as colored blocks positioned by their `start_time` and sized by duration, with halls as columns and a time axis on the left.
+  - 30-minute grid resolution (1 hour = 36px tall by default)
+  - Halls auto-detected from the event's sessions and laid out as consistent columns across all days
+  - Break-type sessions span all hall columns as a gray ribbon
+  - Each block colored from its session type (with translucent fill + colored left bar)
+  - Block shows: type badge · title · time · top 4 speakers (with +N indicator if more)
+  - Hover lifts the block
+- Day section now has a dark navy header with "DAY N" eyebrow + large date.
+- New day-nav at the top: anchor pills (Day 1 · Mon, Day 2 · Tue, …) for quick jumping.
+- **Mobile fallback under 800px**: grid is hidden and a clean vertical list takes over, with the type color preserved as a left border.
+
+### Notes
+- No data model changes. Pure template + CSS rewrite. Old `<ul class="de-fe-sessions">` list view is gone; if you relied on the old DOM in custom CSS, you'll need to retarget to `.de-fe-block` / `.de-fe-schedule-grid`.
+
 ## [0.5.1] - 2026-05-12
 
 ### Fixed
