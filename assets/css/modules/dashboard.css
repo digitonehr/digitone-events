@@ -1,0 +1,48 @@
+/**
+ * DigitOne Events — Dashboard styles.
+ */
+
+.digitone-events-dashboard .de-dashboard-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 16px;
+	margin: 24px 0;
+}
+.digitone-events-dashboard .de-stat-card {
+	background: var(--de-color-surface);
+	border: 1px solid var(--de-color-border-soft);
+	border-radius: var(--de-radius-lg);
+	padding: 22px;
+	box-shadow: var(--de-shadow-card);
+}
+.digitone-events-dashboard .de-stat-card-wide {
+	grid-column: span 2;
+}
+.digitone-events-dashboard .de-stat-num {
+	font-size: 36px;
+	font-weight: 700;
+	color: var(--de-color-primary);
+	line-height: 1;
+}
+.digitone-events-dashboard .de-stat-num-small {
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--de-color-text);
+	margin: 6px 0 4px;
+}
+.digitone-events-dashboard .de-stat-label {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--de-color-text-soft);
+	margin-top: 8px;
+}
+.digitone-events-dashboard .de-stat-sub {
+	margin-top: 4px;
+}
+.digitone-events-dashboard .de-quick-links {
+	display: flex;
+	gap: 12px;
+	margin: 24px 0;
+	flex-wrap: wrap;
+}

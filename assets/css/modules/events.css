@@ -1,0 +1,23 @@
+/**
+ * DigitOne Events — Events module styles.
+ */
+
+.de-events-table th,
+.de-events-table td {
+	vertical-align: middle;
+}
+.de-events-table .check-column {
+	width: 32px;
+}
+.de-events-table code {
+	background: var(--de-color-border-soft);
+	padding: 1px 6px;
+	border-radius: 4px;
+	font-size: 12px;
+}
+.de-events-table tr.is-selected td {
+	background: #fef3c7;
+}
+.de-row-actions {
+	white-space: nowrap;
+}

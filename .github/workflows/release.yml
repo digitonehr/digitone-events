@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version from tag
+        id: vars
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}"          >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}"  >> "$GITHUB_OUTPUT"
+
+      - name: Verify Version header matches tag
+        run: |
+          HEADER_VERSION=$(grep -oP '^\s*\*\s*Version:\s*\K[0-9A-Za-z.\-]+' digitone-events.php || true)
+          CONSTANT_VERSION=$(grep -oP "DIGITONE_EVENTS_VERSION',\s*'\K[^']+" digitone-events.php || true)
+          echo "Header:   ${HEADER_VERSION}"
+          echo "Constant: ${CONSTANT_VERSION}"
+          echo "Tag:      ${{ steps.vars.outputs.version }}"
+          if [ "$HEADER_VERSION" != "${{ steps.vars.outputs.version }}" ]; then
+            echo "::error::Plugin header Version (${HEADER_VERSION}) does not match tag (${{ steps.vars.outputs.version }})"
+            exit 1
+          fi
+          if [ "$CONSTANT_VERSION" != "${{ steps.vars.outputs.version }}" ]; then
+            echo "::error::DIGITONE_EVENTS_VERSION constant (${CONSTANT_VERSION}) does not match tag (${{ steps.vars.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Build plugin zip
+        run: |
+          set -euo pipefail
+          STAGE="$(mktemp -d)"
+          DEST="${STAGE}/digitone-events"
+          mkdir -p "${DEST}"
+
+          # Copy everything except VCS / build artefacts.
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='tests' \
+            --exclude='*.zip' \
+            --exclude='build' \
+            --exclude='dist' \
+            --exclude='.editorconfig' \
+            --exclude='.phpcs.xml*' \
+            --exclude='phpunit.xml*' \
+            --exclude='.phpunit.result.cache' \
+            --exclude='.env*' \
+            --exclude='.DS_Store' \
+            ./ "${DEST}/"
+
+          mkdir -p build
+          ( cd "${STAGE}" && zip -rq "${GITHUB_WORKSPACE}/build/digitone-events.zip" digitone-events )
+
+          ls -la build/
+          unzip -l build/digitone-events.zip | head -30
+
+      - name: Extract release notes
+        id: notes
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          if [ -f CHANGELOG.md ]; then
+            awk -v version="${VERSION}" '
+              $0 ~ "^## \\[" version "\\]" { capture=1; next }
+              capture && $0 ~ "^## \\[" { exit }
+              capture { print }
+            ' CHANGELOG.md > release-notes.md
+            if [ ! -s release-notes.md ]; then
+              echo "Release v${VERSION}" > release-notes.md
+            fi
+          else
+            echo "Release v${VERSION}" > release-notes.md
+          fi
+          echo "---- release-notes.md ----"
+          cat release-notes.md
+
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: ${{ steps.vars.outputs.tag }}
+          body_path: release-notes.md
+          files: build/digitone-events.zip
+          draft: false
+          prerelease: false

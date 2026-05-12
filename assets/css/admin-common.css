@@ -1,0 +1,218 @@
+/**
+ * DigitOne Events — common admin styles.
+ * Design tokens, badges, modal, forms, dashboard cards.
+ */
+
+:root {
+	--de-color-bg: #f6f7f7;
+	--de-color-surface: #ffffff;
+	--de-color-border: #c3c4c7;
+	--de-color-border-soft: #e5e7eb;
+	--de-color-text: #1d2327;
+	--de-color-text-soft: #50575e;
+	--de-color-primary: #2271b1;
+	--de-color-primary-hover: #135e96;
+	--de-color-success: #00a32a;
+	--de-color-warning: #dba617;
+	--de-color-danger: #d63638;
+	--de-color-muted: #8c8f94;
+	--de-radius: 6px;
+	--de-radius-lg: 10px;
+	--de-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--de-shadow-modal: 0 12px 30px rgba(0, 0, 0, 0.2);
+	--de-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.digitone-events-page,
+.digitone-events-dashboard,
+.digitone-events-settings {
+	font-family: var(--de-font);
+}
+
+/* Version badge */
+.de-version-badge {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--de-color-text-soft);
+	background: var(--de-color-border-soft);
+	padding: 3px 8px;
+	border-radius: 10px;
+	margin-left: 8px;
+	vertical-align: middle;
+}
+
+/* Status badges */
+.de-badge {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	line-height: 1.6;
+}
+.de-badge-draft {
+	background: #e5e7eb;
+	color: #374151;
+}
+.de-badge-published {
+	background: #dcfce7;
+	color: #166534;
+}
+.de-badge-archived {
+	background: #fee2e2;
+	color: #991b1b;
+}
+.de-badge-active {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+/* Toolbar */
+.de-toolbar {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	margin: 16px 0;
+	flex-wrap: wrap;
+}
+.de-toolbar .de-search {
+	min-width: 260px;
+}
+
+/* Tables */
+.de-events-table .de-empty td {
+	text-align: center;
+	padding: 28px 12px;
+	color: var(--de-color-text-soft);
+	font-style: italic;
+}
+.de-row-actions .button {
+	margin-right: 4px;
+}
+
+/* Feedback toast */
+.de-feedback {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	z-index: 100000;
+	pointer-events: none;
+}
+.de-feedback .de-toast {
+	background: var(--de-color-text);
+	color: #fff;
+	padding: 12px 18px;
+	border-radius: var(--de-radius);
+	margin-top: 8px;
+	max-width: 360px;
+	box-shadow: var(--de-shadow-modal);
+	animation: deToastIn 0.2s ease;
+	pointer-events: auto;
+}
+.de-feedback .de-toast-success { background: var(--de-color-success); }
+.de-feedback .de-toast-error   { background: var(--de-color-danger); }
+@keyframes deToastIn {
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal (uses native <dialog>) */
+.de-modal {
+	max-width: 560px;
+	width: 90%;
+	border: none;
+	border-radius: var(--de-radius-lg);
+	padding: 0;
+	box-shadow: var(--de-shadow-modal);
+	background: var(--de-color-surface);
+	color: var(--de-color-text);
+}
+.de-modal::backdrop {
+	background: rgba(0, 0, 0, 0.4);
+}
+.de-modal-form {
+	display: flex;
+	flex-direction: column;
+	max-height: 85vh;
+}
+.de-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--de-color-border-soft);
+}
+.de-modal-title {
+	margin: 0;
+	font-size: 16px;
+}
+.de-modal-close {
+	background: none;
+	border: 0;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	color: var(--de-color-text-soft);
+	padding: 0 4px;
+}
+.de-modal-close:hover {
+	color: var(--de-color-danger);
+}
+.de-modal-body {
+	padding: 20px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+.de-modal-footer {
+	padding: 14px 20px;
+	border-top: 1px solid var(--de-color-border-soft);
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	background: #fafafa;
+	border-radius: 0 0 var(--de-radius-lg) var(--de-radius-lg);
+}
+
+/* Form fields */
+.de-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.de-field > span {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--de-color-text-soft);
+}
+.de-field > span em {
+	color: var(--de-color-danger);
+	font-style: normal;
+}
+.de-field input[type="text"],
+.de-field input[type="date"],
+.de-field input[type="email"],
+.de-field input[type="password"],
+.de-field input[type="search"],
+.de-field select,
+.de-field textarea {
+	width: 100%;
+	box-sizing: border-box;
+}
+.de-field-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+/* Settings page */
+.de-check-result {
+	margin-left: 12px;
+	font-weight: 500;
+}
+.de-check-result.is-success { color: var(--de-color-success); }
+.de-check-result.is-warning { color: var(--de-color-warning); }
+.de-check-result.is-error   { color: var(--de-color-danger); }
