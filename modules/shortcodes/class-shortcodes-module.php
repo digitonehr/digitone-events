@@ -146,6 +146,17 @@ final class DigitOne_Events_Shortcodes_Module {
 			);
 		}
 		wp_enqueue_style( 'digitone-events-frontend' );
+
+		if ( ! wp_script_is( 'digitone-events-frontend', 'registered' ) ) {
+			wp_register_script(
+				'digitone-events-frontend',
+				DIGITONE_EVENTS_URL . 'assets/js/frontend.js',
+				[],
+				DIGITONE_EVENTS_VERSION,
+				true
+			);
+		}
+		wp_enqueue_script( 'digitone-events-frontend' );
 	}
 
 }

@@ -1,13 +1,11 @@
 <?php
 /**
- * Frontend agenda — modern time-grid layout (v0.5.2).
+ * Frontend agenda — time-grid schedule with day switcher (v0.5.4).
  *
- * Each day is rendered as a CSS Grid with:
- *   - Column 1: time labels (left axis)
- *   - Columns 2..N: one column per hall used that day
- *   - Rows: 30-minute slots from earliest start to latest end
- *   - Sessions positioned via grid-row span and grid-column
- *   - Break-type sessions span all hall columns
+ * Only one day is visible at a time. Initial day is chosen by PHP:
+ *   - If today's date matches one of the event days → that day
+ *   - Otherwise → first day
+ * JS handles clicking between days (frontend.js).
  *
  * @var array<string,mixed>                              $event
  * @var array<int,array<string,mixed>>                   $days
@@ -17,25 +15,18 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Convert HH:MM:SS to total minutes since midnight.
- */
 $to_min = function ( ?string $hms ) : ?int {
 	if ( ! $hms ) return null;
 	$parts = explode( ':', $hms );
 	if ( count( $parts ) < 2 ) return null;
 	return ( (int) $parts[0] ) * 60 + (int) $parts[1];
 };
-
-/**
- * Format HH:MM from minutes.
- */
 $fmt = function ( int $m ) : string {
 	return sprintf( '%02d:%02d', intdiv( $m, 60 ), $m % 60 );
 };
 
-// Determine the global set of halls used across the event (so columns are consistent across days).
-$all_halls   = []; // id => name
+// Determine the global hall set used across the event.
+$all_halls       = [];
 $all_halls_order = [];
 foreach ( $sessions_by_day as $sessions ) {
 	foreach ( $sessions as $s ) {
@@ -43,25 +34,35 @@ foreach ( $sessions_by_day as $sessions ) {
 		$hname = $s['sub_venue_name'] ?? null;
 		if ( ! $hid || ! $hname ) continue;
 		if ( ! isset( $all_halls[ $hid ] ) ) {
-			$all_halls[ $hid ]      = $hname;
-			$all_halls_order[]      = $hid;
+			$all_halls[ $hid ] = $hname;
+			$all_halls_order[] = $hid;
 		}
 	}
 }
-sort( $all_halls_order, SORT_STRING );
-// Re-order alphabetically by hall name to keep Hall A first.
 usort( $all_halls_order, function ( $a, $b ) use ( $all_halls ) {
 	return strcasecmp( $all_halls[ $a ], $all_halls[ $b ] );
 } );
 $hall_count = count( $all_halls_order );
-$hall_col   = []; // hall_id => grid column index (2-based)
+$hall_col   = [];
 foreach ( $all_halls_order as $i => $hid ) {
 	$hall_col[ $hid ] = $i + 2;
 }
 
-$slot_minutes = 30; // grid row = 30 min
+// Choose default day: today's date if it matches one of the event days, else 0.
+$today        = current_time( 'Y-m-d' );
+$current_day  = 0;
+foreach ( $days as $i => $d ) {
+	if ( $d['day_date'] === $today ) {
+		$current_day = $i;
+		break;
+	}
+}
+
+$slot_minutes = 30;
 ?>
-<div class="digitone-events-frontend digitone-events-schedule" data-event-slug="<?php echo esc_attr( $event['slug'] ); ?>">
+<div class="digitone-events-frontend digitone-events-schedule"
+	data-event-slug="<?php echo esc_attr( $event['slug'] ); ?>"
+	data-initial-day="<?php echo (int) $current_day; ?>">
 
 	<header class="de-fe-header">
 		<h2 class="de-fe-title"><?php echo esc_html( $event['name'] ); ?></h2>
@@ -79,15 +80,20 @@ $slot_minutes = 30; // grid row = 30 min
 	</header>
 
 	<?php if ( ! empty( $days ) ) : ?>
-		<nav class="de-fe-day-nav">
+		<nav class="de-fe-day-nav" role="tablist">
 			<?php foreach ( $days as $i => $d ) :
-				$anchor = 'de-day-' . ( $i + 1 );
-				$wd     = DigitOne_Events_Helpers_Format::date_display( $d['day_date'] );
+				$is_active = ( $i === $current_day );
+				$wd        = DigitOne_Events_Helpers_Format::date_display( $d['day_date'] );
 			?>
-				<a class="de-fe-day-nav-item" href="#<?php echo esc_attr( $anchor ); ?>">
+				<button type="button"
+					class="de-fe-day-nav-item<?php echo $is_active ? ' is-active' : ''; ?>"
+					data-day-index="<?php echo (int) $i; ?>"
+					role="tab"
+					aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
+					aria-controls="de-day-panel-<?php echo (int) $i; ?>">
 					<span class="de-fe-day-num">Day <?php echo esc_html( $i + 1 ); ?></span>
 					<span class="de-fe-day-date"><?php echo esc_html( $wd ); ?></span>
-				</a>
+				</button>
 			<?php endforeach; ?>
 		</nav>
 	<?php endif; ?>
@@ -98,7 +104,6 @@ $slot_minutes = 30; // grid row = 30 min
 		<?php foreach ( $days as $day_idx => $day ) :
 			$sessions = $sessions_by_day[ $day['id'] ] ?? [];
 
-			// Compute earliest start / latest end (in minutes) for the day.
 			$starts = $ends = [];
 			foreach ( $sessions as $s ) {
 				$st = $to_min( $s['start_time'] );
@@ -107,23 +112,24 @@ $slot_minutes = 30; // grid row = 30 min
 				if ( $en !== null ) $ends[]   = $en;
 			}
 			if ( empty( $starts ) ) {
-				$day_start = 8 * 60;  // fallback 08:00
-				$day_end   = 19 * 60; // fallback 19:00
+				$day_start = 8 * 60;
+				$day_end   = 19 * 60;
 			} else {
 				$day_start = (int) floor( min( $starts ) / $slot_minutes ) * $slot_minutes;
 				$day_end   = (int) ceil(  max( $ends )   / $slot_minutes ) * $slot_minutes;
 			}
 			$total_slots = max( 1, intdiv( $day_end - $day_start, $slot_minutes ) );
 
-			$anchor    = 'de-day-' . ( $day_idx + 1 );
-			$day_label = DigitOne_Events_Helpers_Format::date_display( $day['day_date'] );
-			if ( ! empty( $day['label'] ) ) {
-				$day_label_extra = $day['label'];
-			} else {
-				$day_label_extra = '';
-			}
+			$day_label       = DigitOne_Events_Helpers_Format::date_display( $day['day_date'] );
+			$day_label_extra = $day['label'] ?? '';
+			$is_active       = ( $day_idx === $current_day );
 		?>
-			<section class="de-fe-schedule-day" id="<?php echo esc_attr( $anchor ); ?>">
+			<section class="de-fe-schedule-day<?php echo $is_active ? ' is-active' : ''; ?>"
+				id="de-day-panel-<?php echo (int) $day_idx; ?>"
+				data-day-index="<?php echo (int) $day_idx; ?>"
+				role="tabpanel"
+				aria-hidden="<?php echo $is_active ? 'false' : 'true'; ?>">
+
 				<div class="de-fe-day-header">
 					<div class="de-fe-day-header-num">Day <?php echo esc_html( $day_idx + 1 ); ?></div>
 					<div class="de-fe-day-header-date"><?php echo esc_html( $day_label ); ?></div>
@@ -141,28 +147,24 @@ $slot_minutes = 30; // grid row = 30 min
 						role="grid"
 						aria-label="<?php echo esc_attr( $day_label ); ?>">
 
-						<!-- Top-left corner -->
 						<div class="de-fe-grid-corner" style="grid-row: 1; grid-column: 1"></div>
 
-						<!-- Hall headers row -->
 						<?php foreach ( $all_halls_order as $hid ) : ?>
 							<div class="de-fe-grid-hall" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>">
 								<?php echo esc_html( $all_halls[ $hid ] ); ?>
 							</div>
 						<?php endforeach; ?>
 
-						<!-- Time-axis labels (one per slot row) -->
 						<?php for ( $i = 0; $i < $total_slots; $i++ ) :
-							$row_idx = $i + 2; // row 1 = headers
+							$row_idx = $i + 2;
 							$min     = $day_start + $i * $slot_minutes;
-							$show    = ( $min % 60 === 0 ); // only show labels on the hour for less noise
+							$show    = ( $min % 60 === 0 );
 						?>
 							<div class="de-fe-grid-time<?php echo $show ? ' is-hour' : ''; ?>" style="grid-row: <?php echo (int) $row_idx; ?>; grid-column: 1">
 								<?php echo $show ? esc_html( $fmt( $min ) ) : ''; ?>
 							</div>
 						<?php endfor; ?>
 
-						<!-- Session blocks -->
 						<?php foreach ( $sessions as $s ) :
 							$st = $to_min( $s['start_time'] );
 							$en = $to_min( $s['end_time'] );
@@ -170,7 +172,6 @@ $slot_minutes = 30; // grid row = 30 min
 							$row_start = intdiv( $st - $day_start, $slot_minutes ) + 2;
 							$row_span  = max( 1, intdiv( $en - $st,        $slot_minutes ) );
 
-							// A break-type session spans all hall columns.
 							$is_break = ! empty( $s['type_name'] ) && strtolower( $s['type_name'] ) === 'break';
 							if ( $is_break ) {
 								$col_style = 'grid-column: 2 / -1';
@@ -213,7 +214,6 @@ $slot_minutes = 30; // grid row = 30 min
 
 					</div>
 
-					<!-- Mobile fallback: simple list -->
 					<ul class="de-fe-mobile-list">
 						<?php foreach ( $sessions as $s ) :
 							$type_label = trim( ( $s['type_icon'] ?? '' ) . ' ' . ( $s['type_name'] ?? '' ) );

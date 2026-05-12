@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2026-05-12
+
+### Changed
+- **Agenda shortcode is now a true day switcher.** Only one day is visible at a time. Clicking a day pill at the top switches the active panel — no page reload, no scrolling through stacked days.
+- **Smart default day**: when the page loads, the active day is the one whose `day_date` matches today (via `current_time('Y-m-d')`). If today doesn't match any event day (e.g. the page is visited before the event, or after), Day 1 is selected. Initial state is set in PHP, so the right day is visible even before JS executes.
+- **Roomier grid**: header row is now an explicit 48px (no more visual overlap into the first slot row), each 30-min slot is 36px (was 18px) → 1 hour = 72px tall. Session blocks have more room for title + speakers without truncation.
+- Day picker buttons are real `<button>` elements with `is-active` state — previously anchor links to `#de-day-N` that did nothing useful when JS was off.
+- Active day pill is now dark navy (matches the day header banner) instead of just hovered styling.
+- Shareable URLs: `?de-day=2` query param or `#de-day-2` hash both work to deep-link to a specific day on page load.
+
+### Added
+- `assets/js/frontend.js` — small (no dependencies) day switcher script. Registered + enqueued on demand by the same mechanism as the stylesheet, so it works with page builders (Breakdance, Elementor, etc.) and block themes.
+
 ## [0.5.3] - 2026-05-12
 
 ### Fixed
