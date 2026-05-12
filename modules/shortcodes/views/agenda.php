@@ -37,11 +37,11 @@ defined( 'ABSPATH' ) || exit;
 			}
 		?>
 			<section class="de-fe-day">
-				<h3 class="de-fe-day-title"><?php echo esc_html( $day_label ); ?></h3>
+				<div class="de-fe-day-title"><?php echo esc_html( $day_label ); ?></div>
 				<?php if ( empty( $day_sessions ) ) : ?>
 					<p class="de-fe-day-empty"><?php esc_html_e( 'No sessions scheduled.', 'digitone-events' ); ?></p>
 				<?php else : ?>
-					<ol class="de-fe-sessions">
+					<ul class="de-fe-sessions">
 						<?php foreach ( $day_sessions as $s ) :
 							$time = '';
 							if ( ! empty( $s['start_time'] ) ) {
@@ -67,7 +67,7 @@ defined( 'ABSPATH' ) || exit;
 												<?php echo esc_html( $s['type_name'] ); ?>
 											</span>
 										<?php endif; ?>
-										<h4 class="de-fe-session-title"><?php echo esc_html( $s['title'] ); ?></h4>
+										<div class="de-fe-session-title"><?php echo esc_html( $s['title'] ); ?></div>
 									</div>
 									<?php if ( $venue ) : ?>
 										<div class="de-fe-session-venue">📍 <?php echo esc_html( $venue ); ?></div>
@@ -96,7 +96,7 @@ defined( 'ABSPATH' ) || exit;
 								</div>
 							</li>
 						<?php endforeach; ?>
-					</ol>
+					</ul>
 				<?php endif; ?>
 			</section>
 		<?php endforeach; ?>

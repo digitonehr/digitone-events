@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
 		<ul class="de-fe-venues-list">
 			<?php foreach ( $tree as $v ) : ?>
 				<li class="de-fe-venue">
-					<h3 class="de-fe-venue-name"><?php echo esc_html( $v['name'] ); ?></h3>
+					<div class="de-fe-venue-name"><?php echo esc_html( $v['name'] ); ?></div>
 					<?php if ( ! empty( $v['address'] ) ) : ?>
 						<address class="de-fe-venue-address"><?php echo nl2br( esc_html( $v['address'] ) ); ?></address>
 					<?php endif; ?>

@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-05-12
+
+### Fixed
+- **Frontend agenda visual polish**. The frontend stylesheet now defensively resets list bullets, list numbering, and theme heading overrides that block themes (Twenty Twenty-Five, Twenty Twenty-Three, Astra etc.) injected into our shortcode markup.
+- Replaced `<ol>` with `<ul>` in the agenda template, and converted `<h3>`/`<h4>` session/day titles to scoped `<div>` elements so themes can no longer balloon their font-size.
+- Sessions now render as proper cards with a 96px time column on the left and content on the right, including a subtle hover state.
+- Day headers now have a gradient blue bar so they stand out at a glance.
+- Speakers per session are rendered as small inline pills with an optional avatar and role badge.
+- Description blocks have a subtle gray inset.
+- Improved spacing, typography rhythm, and responsive behavior under 600px.
+
+### Notes
+- No data model changes. Pure CSS + minor template change; no schema migration needed.
+
 ## [0.5.0] - 2026-05-12
 
 ### Added — Phase 5 (feature complete)
