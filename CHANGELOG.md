@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-05-13
+
+### Added — Frontend UX bundle, part 1 of 2 (calendar + detail modal)
+
+- **iCal (.ics) export of the full event agenda.** A new "Add to calendar" button next to the event description downloads an RFC 5545 compliant `.ics` file containing one VEVENT per non-break session, with proper timezone conversion to UTC so calendar apps display the right wall-clock time in the delegate's own timezone. Speakers and role assignments are included in each session's DESCRIPTION field.
+- **Per-session iCal download.** Inside the new session-detail modal there is an "Add to calendar" button that downloads just that one session as an `.ics`.
+- **Session detail modal.** Clicking (or pressing Enter/Space on) any non-break block in the agenda opens a modal showing the type, full title, time + venue, full HTML description, and the full speakers list with photos, role badges, and bios. The modal supports backdrop-click, ✕ button, and ESC to close, with proper focus restoration and aria-modal semantics.
+- **Two new REST endpoints** (both public, no auth):
+  - `GET /wp-json/digitone-events/v1/ical/event/{slug}` — full event .ics
+  - `GET /wp-json/digitone-events/v1/ical/session/{session-id}` — single session .ics
+- **New module**: `DigitOne_Events_Calendar_Module` registers the REST routes.
+- **New helper**: `DigitOne_Events_Helpers_Ical` generates RFC 5545 compliant calendar files (proper line folding at 75 octets, UTF-8 boundary-safe, text escaping per §3.3.11).
+
+### Changed
+- `DigitOne_Events_Sessions_Repository::speakers_for_sessions()` now joins the speaker `bio` field as well, so the new detail modal can show speaker bios.
+- Each non-break block in the agenda grid is now keyboard-focusable (`tabindex="0"`, `role="button"`) so the detail modal can be opened without a mouse.
+
+### What's next (0.7.1)
+Search/filter + print stylesheet (in colour) + speakers page polish. Coming in a follow-up release so this one stays focused and easy to test.
+
 ## [0.6.0] - 2026-05-13
 
 ### Fixed

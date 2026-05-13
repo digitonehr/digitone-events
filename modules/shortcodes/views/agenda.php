@@ -73,6 +73,19 @@ $slot_minutes = 30;
 		<?php if ( ! empty( $event['description'] ) ) : ?>
 			<div class="de-fe-description"><?php echo wp_kses_post( $event['description'] ); ?></div>
 		<?php endif; ?>
+		<div class="de-fe-header-actions">
+			<a class="de-fe-add-calendar"
+				href="<?php echo esc_url( rest_url( 'digitone-events/v1/ical/event/' . $event['slug'] ) ); ?>"
+				download>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+					<line x1="16" y1="2" x2="16" y2="6"></line>
+					<line x1="8" y1="2" x2="8" y2="6"></line>
+					<line x1="3" y1="10" x2="21" y2="10"></line>
+				</svg>
+				<?php esc_html_e( 'Add to calendar', 'digitone-events' ); ?>
+			</a>
+		</div>
 	</header>
 
 	<?php if ( ! empty( $days ) ) : ?>
@@ -186,7 +199,10 @@ $slot_minutes = 30;
 							$type_label = trim( ( $s['type_icon'] ?? '' ) . ' ' . ( $s['type_name'] ?? '' ) );
 							$time_label = $fmt( $st ) . ' – ' . $fmt( $en );
 						?>
-							<article class="de-fe-block<?php echo $is_break ? ' is-break' : ''; ?>" style="<?php echo $style; ?>">
+							<article class="de-fe-block<?php echo $is_break ? ' is-break' : ''; ?>"
+								style="<?php echo $style; ?>"
+								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
+								<?php if ( ! $is_break ) : ?>tabindex="0" role="button"<?php endif; ?>>
 								<?php if ( $type_label ) : ?>
 									<div class="de-fe-block-type"><?php echo esc_html( $type_label ); ?></div>
 								<?php endif; ?>
@@ -241,4 +257,47 @@ $slot_minutes = 30;
 			</section>
 		<?php endforeach; ?>
 	<?php endif; ?>
+
+	<?php
+	// Build a JSON map of session details for the detail modal.
+	$detail_map = [];
+	foreach ( $sessions_by_day as $day_id => $day_sessions ) {
+		foreach ( $day_sessions as $s ) {
+			if ( ! empty( $s['type_name'] ) && strtolower( $s['type_name'] ) === 'break' ) continue;
+			$speakers_out = [];
+			foreach ( (array) ( $s['speakers'] ?? [] ) as $sp ) {
+				$speakers_out[] = [
+					'name'        => trim( ( $sp['first_name'] ?? '' ) . ' ' . ( $sp['last_name'] ?? '' ) ),
+					'photo_url'   => $sp['photo_url'] ?? '',
+					'bio'         => $sp['bio']       ?? '',
+					'role_name'   => $sp['role_name'] ?? '',
+					'role_color'  => $sp['role_color']?? '',
+				];
+			}
+			$detail_map[ $s['id'] ] = [
+				'title'          => $s['title'] ?? '',
+				'description'    => $s['description'] ?? '',
+				'start_time'     => substr( (string) ( $s['start_time'] ?? '' ), 0, 5 ),
+				'end_time'       => substr( (string) ( $s['end_time']   ?? '' ), 0, 5 ),
+				'venue_name'     => $s['venue_name']     ?? '',
+				'sub_venue_name' => $s['sub_venue_name'] ?? '',
+				'type_name'      => $s['type_name']      ?? '',
+				'type_color'     => $s['type_color']     ?? '',
+				'type_icon'      => $s['type_icon']      ?? '',
+				'speakers'       => $speakers_out,
+				'ics_url'        => rest_url( 'digitone-events/v1/ical/session/' . $s['id'] ),
+			];
+		}
+	}
+	?>
+	<script type="application/json" class="de-fe-session-data"><?php echo wp_json_encode( $detail_map ); ?></script>
+
+	<!-- Session detail modal (hidden by default, opened by JS on block click) -->
+	<div class="de-fe-session-modal" role="dialog" aria-modal="true" aria-hidden="true" hidden>
+		<div class="de-fe-modal-backdrop" data-de-modal-close></div>
+		<div class="de-fe-modal-panel" role="document">
+			<button type="button" class="de-fe-modal-close" data-de-modal-close aria-label="<?php esc_attr_e( 'Close', 'digitone-events' ); ?>">×</button>
+			<div class="de-fe-modal-body"></div>
+		</div>
+	</div>
 </div>

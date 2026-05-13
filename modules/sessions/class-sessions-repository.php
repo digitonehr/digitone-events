@@ -76,7 +76,7 @@ final class DigitOne_Events_Sessions_Repository {
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT sr.session_id, sr.role_id,
-				        s.id AS speaker_id, s.first_name, s.last_name, s.photo_url,
+				        s.id AS speaker_id, s.first_name, s.last_name, s.photo_url, s.bio,
 				        r.name AS role_name, r.color AS role_color
 				 FROM {$j} sr
 				 INNER JOIN {$sp} s ON sr.speaker_id = s.id

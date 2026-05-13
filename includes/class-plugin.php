@@ -87,6 +87,10 @@ final class DigitOne_Events_Plugin {
 		$this->modules['shortcodes'] = new DigitOne_Events_Shortcodes_Module();
 		$this->modules['shortcodes']->register();
 
+		// Calendar module — REST endpoints for iCal (.ics) downloads.
+		$this->modules['calendar'] = new DigitOne_Events_Calendar_Module();
+		$this->modules['calendar']->register();
+
 		do_action( 'digitone_events_modules_registered', $this->modules );
 	}
 
