@@ -242,17 +242,20 @@
 	 * then triggers window.print(). Title is restored after.
 	 * ============================================================ */
 	/* ============================================================
-	 * Export to PDF — client-side PDF generation (v0.8.3).
+	 * Export to PDF — client-side PDF generation (v0.8.5).
 	 *
-	 * Lazy-loads html2pdf.js (bundle of jsPDF + html2canvas, ~150 KB)
-	 * from cdnjs on first click. After clone & off-screen render the
-	 * file downloads with a sensible filename. No print dialog, no
-	 * server-side dependency, no Composer.
-	 *
-	 * The cloned schedule receives a `.de-fe-pdf-context` class; CSS
-	 * rules mirroring @media print are scoped under that class (the
-	 * mirror is generated at runtime by `installPdfContextStyles` —
-	 * the @media print block stays the single source of truth).
+	 * Architecture:
+	 *   - html2pdf.js (jsPDF + html2canvas, ~150 KB) is lazy-loaded
+	 *     from cdnjs on first click.
+	 *   - The .de-fe-print-table styling lives outside @media print
+	 *     (since v0.8.5), so the cells render correctly even when
+	 *     html2canvas captures the DOM (no print context).
+	 *   - We pass the LIVE schedule element to html2pdf and use
+	 *     html2canvas's `onclone` callback to mutate the cloned DOM
+	 *     (visible only to the rasterizer): hide screen-only widgets,
+	 *     force every day visible, and flip the print tables to
+	 *     display:table. The user's live page is never touched, so
+	 *     there's no flicker.
 	 * ============================================================ */
 	const HTML2PDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
 
@@ -266,7 +269,7 @@
 		btn.addEventListener( 'click', async function () {
 			const original = btn.innerHTML;
 			btn.disabled = true;
-			btn.innerHTML = '<span class="de-fe-spinner" aria-hidden="true"></span> ' + 'Generating PDF…';
+			btn.innerHTML = '<span class="de-fe-spinner" aria-hidden="true"></span> Generating PDF…';
 
 			try {
 				await generatePdf( schedule, eventName );
@@ -297,49 +300,32 @@
 		} );
 	}
 
-	/* Read every rule inside any @media block whose condition contains
-	 * "print", and emit the same rule scoped under .de-fe-pdf-context.
-	 * Source of truth stays in the @media print block — we just project
-	 * it into a class selector so off-screen rendering picks it up. */
-	function installPdfContextStyles() {
-		if ( document.getElementById( 'de-fe-pdf-ctx-styles' ) ) return;
+	/* Mutate the cloned DOM that html2canvas is about to rasterize.
+	 * This is run by html2canvas on its internal iframe — the user's
+	 * live page is untouched, so there's no flicker. */
+	function preparePdfClone( clonedSchedule ) {
+		if ( ! clonedSchedule ) return;
 
-		let css = '';
-		const sheets = document.styleSheets;
-		for ( let i = 0; i < sheets.length; i++ ) {
-			let rules;
-			try { rules = sheets[ i ].cssRules || sheets[ i ].rules; }
-			catch ( e ) { continue; } // CORS-locked sheet
-			if ( ! rules ) continue;
+		// Hide every on-screen widget that has no place in the PDF.
+		clonedSchedule.querySelectorAll(
+			'.de-fe-day-nav, .de-fe-filters, .de-fe-header-actions, ' +
+			'.de-fe-session-modal, .de-fe-schedule-grid, .de-fe-mobile-list'
+		).forEach( function ( el ) {
+			el.style.setProperty( 'display', 'none', 'important' );
+		} );
 
-			for ( let j = 0; j < rules.length; j++ ) {
-				const r = rules[ j ];
-				if ( r.type !== 4 /* MEDIA_RULE */ ) continue;
-				const cond = ( r.conditionText || r.media.mediaText || '' );
-				if ( cond.indexOf( 'print' ) === -1 ) continue;
+		// Force every day visible (on-screen, only one .is-active at a time).
+		clonedSchedule.querySelectorAll( '.de-fe-schedule-day' ).forEach( function ( day ) {
+			day.classList.add( 'is-active' );
+			day.setAttribute( 'aria-hidden', 'false' );
+			day.style.setProperty( 'display', 'block', 'important' );
+		} );
 
-				for ( let k = 0; k < r.cssRules.length; k++ ) {
-					const inner = r.cssRules[ k ];
-					if ( inner.type !== 1 /* STYLE_RULE */ ) continue;
-					const selectors = inner.selectorText.split( ',' ).map( function ( s ) {
-						return scopePdfSelector( s.trim() );
-					} );
-					css += selectors.join( ', ' ) + ' { ' + inner.style.cssText + ' }\n';
-				}
-			}
-		}
-
-		const tag = document.createElement( 'style' );
-		tag.id = 'de-fe-pdf-ctx-styles';
-		tag.textContent = css;
-		document.head.appendChild( tag );
-	}
-
-	function scopePdfSelector( sel ) {
-		// `body` / `html` rules don't make sense in a cloned subtree — apply to the context root itself
-		if ( sel === 'body' || sel === 'html' ) return '.de-fe-pdf-context';
-		if ( sel === '*' || sel === '*::before' || sel === '*::after' ) return '.de-fe-pdf-context ' + sel;
-		return '.de-fe-pdf-context ' + sel;
+		// Show the print tables (baseline rule is display:none).
+		clonedSchedule.querySelectorAll( '.de-fe-print-table' ).forEach( function ( t ) {
+			t.style.setProperty( 'display', 'table', 'important' );
+			t.style.setProperty( 'width', '100%', 'important' );
+		} );
 	}
 
 	async function generatePdf( schedule, eventName ) {
@@ -348,66 +334,41 @@
 			throw new Error( 'html2pdf.js failed to load' );
 		}
 
-		installPdfContextStyles();
-
-		// Off-screen render container.
-		// IMPORTANT: `de-fe-pdf-context` lives HERE on the wrapper, not on the
-		// clone. The runtime-generated mirror styles are scoped as
-		//   .de-fe-pdf-context .digitone-events-schedule .X
-		// which is a descendant combinator and needs pdf-context to be on a
-		// SEPARATE ancestor element of the schedule, not the schedule itself.
-		const wrapper = document.createElement( 'div' );
-		wrapper.className = 'de-fe-pdf-context';
-		wrapper.style.cssText = 'position:absolute;left:-99999px;top:0;width:1120px;background:#fff;z-index:-1;';
-
-		const clone = schedule.cloneNode( true );
-
-		// Strip UI chrome from the clone — buttons, filters, day-nav,
-		// session modal, screen-only grid, mobile list. The print table
-		// stays and (thanks to the pdf-context class) becomes visible.
-		clone.querySelectorAll(
-			'.de-fe-day-nav, .de-fe-filters, .de-fe-header-actions, .de-fe-session-modal, ' +
-			'.de-fe-schedule-grid, .de-fe-mobile-list, script'
-		).forEach( function ( el ) { el.remove(); } );
-
-		// Force every day visible (otherwise only the active one renders)
-		clone.querySelectorAll( '.de-fe-schedule-day' ).forEach( function ( day ) {
-			day.classList.add( 'is-active' );
-			day.setAttribute( 'aria-hidden', 'false' );
-		} );
-
-		wrapper.appendChild( clone );
-		document.body.appendChild( wrapper );
-
-		// Give the layout engine a tick to apply the cascaded styles
-		await new Promise( function ( r ) { setTimeout( r, 150 ); } );
-
-		try {
-			await window.html2pdf().set( {
-				margin:    [ 8, 8, 10, 8 ],
-				filename:  eventName + ' — Programme.pdf',
-				image:     { type: 'jpeg', quality: 0.95 },
-				html2canvas: {
-					scale: 2,
-					useCORS: true,
-					backgroundColor: '#ffffff',
-					letterRendering: true,
-					logging: false
-				},
-				jsPDF: {
-					unit: 'mm',
-					format: 'a4',
-					orientation: 'landscape',
-					compress: true
-				},
-				pagebreak: {
-					mode:  [ 'css', 'legacy' ],
-					avoid: [ '.de-fe-print-td-session', '.de-fe-print-td-break', '.de-fe-day-header', 'tr' ]
+		await window.html2pdf().set( {
+			margin:    [ 8, 8, 10, 8 ],
+			filename:  eventName + ' — Programme.pdf',
+			image:     { type: 'jpeg', quality: 0.95 },
+			html2canvas: {
+				scale:           2,
+				useCORS:         true,
+				backgroundColor: '#ffffff',
+				letterRendering: true,
+				logging:         false,
+				/* The clonedDoc is a clone of the WHOLE document; the second
+				 * arg is the cloned target element (the schedule). We mutate
+				 * it in-place — only the rasterizer sees these changes. */
+				onclone: function ( clonedDoc, clonedEl ) {
+					try {
+						const target = clonedEl
+							|| clonedDoc.querySelector( '.digitone-events-schedule' );
+						preparePdfClone( target );
+					} catch ( e ) {
+						// eslint-disable-next-line no-console
+						console.warn( '[digitone-events] onclone failed:', e );
+					}
 				}
-			} ).from( clone ).save();
-		} finally {
-			wrapper.remove();
-		}
+			},
+			jsPDF: {
+				unit:        'mm',
+				format:      'a4',
+				orientation: 'landscape',
+				compress:    true
+			},
+			pagebreak: {
+				mode:  [ 'css', 'legacy' ],
+				avoid: [ '.de-fe-print-td-session', '.de-fe-print-td-break', '.de-fe-day-header', 'tr' ]
+			}
+		} ).from( schedule ).save();
 	}
 
 	function setupFilters( schedule ) {

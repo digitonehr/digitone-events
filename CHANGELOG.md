@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-05-13
+
+### Fixed — PDF now actually contains the schedule, not just day headers
+
+The 0.8.4 fix moved `.de-fe-pdf-context` to the wrapper element, but the PDF still came out blank under the day headers. Root cause was a layer deeper than DOM placement:
+
+- **html2canvas doesn't run `@media print`.** It captures the DOM as a regular on-screen view via its internal iframe; the print stylesheet's `display: table` toggle on `.de-fe-print-table` never fires, so the table stays at its baseline `display: none`. Even when `.de-fe-pdf-context` was correctly placed and the mirror rules were scoped, the iframe environment apparently didn't see them apply via cascade through the runtime style tag.
+
+The new approach removes both the mirror-style mechanism and the off-screen wrapper entirely:
+
+1. **All `.de-fe-print-*` styling rules were moved out of `@media print` to global scope.** The base `.de-fe-print-table { display: none }` still hides the table on a normal screen. The print path and the PDF path now both rely on flipping `display: table` to show the table; once it's visible, the cell colors, fonts, borders, etc. apply automatically because their rules live at the top level.
+2. **JS now uses html2canvas's `onclone` callback.** The live schedule element is passed directly to `html2pdf().from(schedule)`. html2canvas clones the document internally; in `onclone`, the cloned schedule has its on-screen widgets (grid, mobile-list, day-nav, filters, action buttons, session modal) hidden with `style.display = 'none' !important`, every `.de-fe-schedule-day` gets `is-active` so all days render, and the print tables get `style.display = 'table' !important`. Only the rasterizer sees these changes — the user's page is never touched.
+
+No more cloning, no more off-screen wrapper, no more runtime CSS scoping, no more `.de-fe-pdf-context` class.
+
 ## [0.8.4] - 2026-05-13
 
 ### Fixed — PDF was rendering only the day headers, no content
@@ -205,6 +220,21 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.5] - 2026-05-13
+
+### Fixed — PDF now actually contains the schedule, not just day headers
+
+The 0.8.4 fix moved `.de-fe-pdf-context` to the wrapper element, but the PDF still came out blank under the day headers. Root cause was a layer deeper than DOM placement:
+
+- **html2canvas doesn't run `@media print`.** It captures the DOM as a regular on-screen view via its internal iframe; the print stylesheet's `display: table` toggle on `.de-fe-print-table` never fires, so the table stays at its baseline `display: none`. Even when `.de-fe-pdf-context` was correctly placed and the mirror rules were scoped, the iframe environment apparently didn't see them apply via cascade through the runtime style tag.
+
+The new approach removes both the mirror-style mechanism and the off-screen wrapper entirely:
+
+1. **All `.de-fe-print-*` styling rules were moved out of `@media print` to global scope.** The base `.de-fe-print-table { display: none }` still hides the table on a normal screen. The print path and the PDF path now both rely on flipping `display: table` to show the table; once it's visible, the cell colors, fonts, borders, etc. apply automatically because their rules live at the top level.
+2. **JS now uses html2canvas's `onclone` callback.** The live schedule element is passed directly to `html2pdf().from(schedule)`. html2canvas clones the document internally; in `onclone`, the cloned schedule has its on-screen widgets (grid, mobile-list, day-nav, filters, action buttons, session modal) hidden with `style.display = 'none' !important`, every `.de-fe-schedule-day` gets `is-active` so all days render, and the print tables get `style.display = 'table' !important`. Only the rasterizer sees these changes — the user's page is never touched.
+
+No more cloning, no more off-screen wrapper, no more runtime CSS scoping, no more `.de-fe-pdf-context` class.
 
 ## [0.8.4] - 2026-05-13
 

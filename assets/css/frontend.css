@@ -1401,132 +1401,6 @@ body.de-fe-modal-open {
 		page-break-inside: auto;
 	}
 	/* thead repeats on every page break automatically */
-	.de-fe-print-table thead {
-		display: table-header-group !important;
-	}
-	.de-fe-print-table tbody {
-		display: table-row-group !important;
-	}
-
-	/* Header cells */
-	.de-fe-print-th-time {
-		background: #f3f4f6 !important;
-		width: 14mm !important;
-		border: 1px solid #d1d5db !important;
-	}
-	.de-fe-print-th-hall {
-		color: #fff !important;
-		padding: 2mm 1mm !important;
-		font-size: 9pt !important;
-		font-weight: 700 !important;
-		text-align: center !important;
-		border: 1px solid rgba(255,255,255,0.3) !important;
-		text-shadow: 0 0.5pt 1pt rgba(0,0,0,0.15) !important;
-		letter-spacing: 0.02em;
-	}
-
-	/* Time column */
-	.de-fe-print-td-time {
-		width: 14mm !important;
-		font-size: 7.5pt !important;
-		font-weight: 600 !important;
-		color: #475569 !important;
-		text-align: right !important;
-		padding: 1mm 1.5mm !important;
-		background: #f9fafb !important;
-		border: 1px solid #e5e7eb !important;
-		vertical-align: top !important;
-		font-variant-numeric: tabular-nums;
-	}
-	.de-fe-print-tr.is-hour .de-fe-print-td-time {
-		font-weight: 700 !important;
-		color: #1f2937 !important;
-	}
-
-	/* Session cells */
-	.de-fe-print-td-session {
-		padding: 1.5mm 1.8mm !important;
-		background: #fff !important;
-		border: 1px solid #e5e7eb !important;
-		border-left: 2.5pt solid var(--type-color, #6b7280) !important;
-		vertical-align: top !important;
-		break-inside: avoid !important;
-		page-break-inside: avoid !important;
-		overflow: hidden;
-	}
-	.de-fe-print-session-type {
-		font-size: 6pt !important;
-		font-weight: 700 !important;
-		color: var(--type-color, #444) !important;
-		letter-spacing: 0.04em !important;
-		text-transform: uppercase !important;
-		margin: 0 0 0.5mm !important;
-	}
-	.de-fe-print-session-title {
-		font-size: 8pt !important;
-		font-weight: 700 !important;
-		color: #0f172a !important;
-		line-height: 1.2 !important;
-		margin: 0 0 0.5mm !important;
-	}
-	.de-fe-print-session-time {
-		font-size: 6.5pt !important;
-		color: #6b7280 !important;
-		font-variant-numeric: tabular-nums;
-		margin: 0 0 0.5mm !important;
-	}
-	.de-fe-print-session-speakers {
-		font-size: 6.5pt !important;
-		color: #1f2937 !important;
-		line-height: 1.25 !important;
-		margin: 0 !important;
-	}
-
-	/* Break cells — amber ribbon */
-	.de-fe-print-td-break {
-		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-		border: 1px solid #fbbf24 !important;
-		padding: 1.5mm 2mm !important;
-		font-size: 8pt !important;
-		color: #78350f !important;
-		font-weight: 600 !important;
-		vertical-align: middle !important;
-		text-align: center !important;
-		break-inside: avoid !important;
-		page-break-inside: avoid !important;
-	}
-	.de-fe-print-break-content {
-		display: inline-flex !important;
-		align-items: center;
-		gap: 6pt;
-		flex-wrap: wrap;
-		justify-content: center;
-	}
-	.de-fe-print-break-icon {
-		font-size: 9pt;
-	}
-	.de-fe-print-break-title {
-		font-weight: 700 !important;
-		color: #78350f !important;
-	}
-	.de-fe-print-break-time {
-		font-size: 7pt !important;
-		color: #92400e !important;
-		font-variant-numeric: tabular-nums;
-	}
-
-	/* Empty cells */
-	.de-fe-print-td-empty {
-		background: #fff !important;
-		border: 1px solid #f3f4f6 !important;
-		padding: 1mm !important;
-	}
-
-	/* Row-level paging hint */
-	.de-fe-print-table tr {
-		page-break-inside: avoid;
-		break-inside: avoid;
-	}
 
 	/* Strip decorative effects */
 	.digitone-events-schedule *,
@@ -1543,4 +1417,141 @@ body.de-fe-modal-open {
 	.digitone-events-schedule a::after {
 		content: none !important;
 	}
+}
+
+/* ============================================================ */
+/* PRINT TABLE STYLING (v0.8.5) — always applied                */
+/* Lives outside @media print so the same rules render the       */
+/* table during html2canvas-based PDF capture, where @media      */
+/* print never fires. The .de-fe-print-table base rule above     */
+/* still hides it on screen via display:none; visibility is      */
+/* flipped on by @media print (printing path) or by the PDF      */
+/* generator setting style.display="table" on the element.       */
+/* ============================================================ */
+
+.de-fe-print-table thead {
+	display: table-header-group !important;
+}
+.de-fe-print-table tbody {
+	display: table-row-group !important;
+}
+
+/* Header cells */
+.de-fe-print-th-time {
+	background: #f3f4f6 !important;
+	width: 14mm !important;
+	border: 1px solid #d1d5db !important;
+}
+.de-fe-print-th-hall {
+	color: #fff !important;
+	padding: 2mm 1mm !important;
+	font-size: 9pt !important;
+	font-weight: 700 !important;
+	text-align: center !important;
+	border: 1px solid rgba(255,255,255,0.3) !important;
+	text-shadow: 0 0.5pt 1pt rgba(0,0,0,0.15) !important;
+	letter-spacing: 0.02em;
+}
+
+/* Time column */
+.de-fe-print-td-time {
+	width: 14mm !important;
+	font-size: 7.5pt !important;
+	font-weight: 600 !important;
+	color: #475569 !important;
+	text-align: right !important;
+	padding: 1mm 1.5mm !important;
+	background: #f9fafb !important;
+	border: 1px solid #e5e7eb !important;
+	vertical-align: top !important;
+	font-variant-numeric: tabular-nums;
+}
+.de-fe-print-tr.is-hour .de-fe-print-td-time {
+	font-weight: 700 !important;
+	color: #1f2937 !important;
+}
+
+/* Session cells */
+.de-fe-print-td-session {
+	padding: 1.5mm 1.8mm !important;
+	background: #fff !important;
+	border: 1px solid #e5e7eb !important;
+	border-left: 2.5pt solid var(--type-color, #6b7280) !important;
+	vertical-align: top !important;
+	break-inside: avoid !important;
+	page-break-inside: avoid !important;
+	overflow: hidden;
+}
+.de-fe-print-session-type {
+	font-size: 6pt !important;
+	font-weight: 700 !important;
+	color: var(--type-color, #444) !important;
+	letter-spacing: 0.04em !important;
+	text-transform: uppercase !important;
+	margin: 0 0 0.5mm !important;
+}
+.de-fe-print-session-title {
+	font-size: 8pt !important;
+	font-weight: 700 !important;
+	color: #0f172a !important;
+	line-height: 1.2 !important;
+	margin: 0 0 0.5mm !important;
+}
+.de-fe-print-session-time {
+	font-size: 6.5pt !important;
+	color: #6b7280 !important;
+	font-variant-numeric: tabular-nums;
+	margin: 0 0 0.5mm !important;
+}
+.de-fe-print-session-speakers {
+	font-size: 6.5pt !important;
+	color: #1f2937 !important;
+	line-height: 1.25 !important;
+	margin: 0 !important;
+}
+
+/* Break cells — amber ribbon */
+.de-fe-print-td-break {
+	background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+	border: 1px solid #fbbf24 !important;
+	padding: 1.5mm 2mm !important;
+	font-size: 8pt !important;
+	color: #78350f !important;
+	font-weight: 600 !important;
+	vertical-align: middle !important;
+	text-align: center !important;
+	break-inside: avoid !important;
+	page-break-inside: avoid !important;
+}
+.de-fe-print-break-content {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 6pt;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+.de-fe-print-break-icon {
+	font-size: 9pt;
+}
+.de-fe-print-break-title {
+	font-weight: 700 !important;
+	color: #78350f !important;
+}
+.de-fe-print-break-time {
+	font-size: 7pt !important;
+	color: #92400e !important;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Empty cells */
+.de-fe-print-td-empty {
+	background: #fff !important;
+	border: 1px solid #f3f4f6 !important;
+	padding: 1mm !important;
+}
+
+/* Row-level paging hint */
+.de-fe-print-table tr {
+	page-break-inside: avoid;
+	break-inside: avoid;
 }
