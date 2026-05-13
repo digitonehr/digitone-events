@@ -758,7 +758,95 @@
 		apply();
 	}
 
+	/* ============================================================
+	 * Speakers shortcode — search box + role filter pills (v0.8.7).
+	 *
+	 * Server pre-bakes per-card filter metadata into data attributes:
+	 *   data-search-text   "first last, last first, title, role role"
+	 *   data-role-ids      "uuid,uuid,uuid"
+	 * So the filter loop is just substring / set-intersection — no
+	 * normalization, no per-keystroke string work.
+	 *
+	 * Server also pre-sorts speakers by last_name → first_name in the
+	 * repository, so the rendered DOM order is already alphabetical.
+	 * ============================================================ */
+	function setupSpeakers( root ) {
+		const grid       = root.querySelector( '.de-fe-speakers-grid' );
+		if ( ! grid ) return;
+
+		const searchEl   = root.querySelector( '[data-de-speakers-search]' );
+		const clearEl    = root.querySelector( '[data-de-speakers-search-clear]' );
+		const pills      = root.querySelectorAll( '[data-de-speakers-role]' );
+		const emptyEl    = root.querySelector( '[data-de-speakers-empty]' );
+		const shownEl    = root.querySelector( '[data-de-speakers-shown]' );
+		const cards      = Array.from( grid.querySelectorAll( '.de-fe-speaker-card' ) );
+
+		let currentSearch = '';
+		let currentRoleId = '';
+
+		function apply() {
+			let visible = 0;
+			cards.forEach( function ( card ) {
+				const searchText = card.getAttribute( 'data-search-text' ) || '';
+				const roleIds    = ( card.getAttribute( 'data-role-ids' ) || '' ).split( ',' );
+
+				const matchesSearch = currentSearch === ''
+					|| searchText.indexOf( currentSearch ) !== -1;
+				const matchesRole = currentRoleId === ''
+					|| roleIds.indexOf( currentRoleId ) !== -1;
+
+				if ( matchesSearch && matchesRole ) {
+					card.removeAttribute( 'hidden' );
+					visible++;
+				} else {
+					card.setAttribute( 'hidden', '' );
+				}
+			} );
+
+			if ( shownEl ) shownEl.textContent = String( visible );
+			if ( emptyEl ) emptyEl.hidden = visible !== 0;
+			if ( clearEl ) clearEl.hidden = currentSearch === '';
+		}
+
+		/* Search box — debounced 200 ms */
+		if ( searchEl ) {
+			let timer = null;
+			searchEl.addEventListener( 'input', function () {
+				window.clearTimeout( timer );
+				timer = window.setTimeout( function () {
+					currentSearch = searchEl.value.trim().toLowerCase();
+					apply();
+				}, 200 );
+			} );
+		}
+		if ( clearEl && searchEl ) {
+			clearEl.addEventListener( 'click', function () {
+				searchEl.value = '';
+				currentSearch = '';
+				searchEl.focus();
+				apply();
+			} );
+		}
+
+		/* Role pills */
+		pills.forEach( function ( pill ) {
+			pill.addEventListener( 'click', function () {
+				const rid = pill.getAttribute( 'data-de-speakers-role' ) || '';
+				currentRoleId = rid;
+				pills.forEach( function ( p ) {
+					const isActive = p === pill;
+					p.classList.toggle( 'is-active', isActive );
+					p.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
+				} );
+				apply();
+			} );
+		} );
+
+		apply();
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		document.querySelectorAll( '.digitone-events-schedule' ).forEach( init );
+		document.querySelectorAll( '.digitone-events-speakers' ).forEach( setupSpeakers );
 	} );
 } )();

@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.7] - 2026-05-13
+
+### Added — Speakers shortcode now has search + role filter (A-bundle finale)
+
+The `[digitone_events_speakers]` shortcode used to render a plain grid of cards in alphabetical order. With ~160 speakers in a real event that's a long scroll. This release adds two filter dimensions plus a live result counter:
+
+- **Search box** — type a name (or part of one) and matching cards stay visible while the rest hide. Input is debounced 200 ms; matches first name, last name, both orderings, title, and role names. UTF-8 lowercasing happens server-side (so `mb_strtolower` runs once per page render, not per keystroke), baked into a `data-search-text` attribute on each card. Croatian diacritics (Veršić, Sršen, Lešić, etc.) match correctly.
+- **Role filter pills** — one pill per role that's actually in use, each in the role's own colour. "All roles" pill resets. The count badge on each pill shows how many speakers carry that role. Pills are role-coloured when active.
+- **Result counter** — header shows `42 / 163 speakers` when a filter is active, updating live as you type.
+- **Empty state** — "No speakers match your search." appears when the combined filter set returns zero results.
+
+Server already sorts speakers by `last_name → first_name` in the repository, so alphabetical-by-surname order was free and the rendered DOM is the source of truth — JS never reorders.
+
+### Internal
+- Per-card metadata: `data-search-text` (searchable strings, UTF-8 lowercased) and `data-role-ids` (comma-separated role UUIDs). Filter loop is substring + set-intersection, no per-keystroke normalization.
+- Combined predicate: `matchesSearch AND matchesRole`. Cards toggle via the `hidden` attribute (cleaner than `display: none` — preserves layout for screen readers).
+- New `setupSpeakers()` initialiser wired into the same DOMContentLoaded pass that boots the schedule shortcodes.
+
 ## [0.8.6] - 2026-05-13
 
 ### Fixed — PDF was rendering only the active day plus the live UI chrome
@@ -238,6 +256,24 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.7] - 2026-05-13
+
+### Added — Speakers shortcode now has search + role filter (A-bundle finale)
+
+The `[digitone_events_speakers]` shortcode used to render a plain grid of cards in alphabetical order. With ~160 speakers in a real event that's a long scroll. This release adds two filter dimensions plus a live result counter:
+
+- **Search box** — type a name (or part of one) and matching cards stay visible while the rest hide. Input is debounced 200 ms; matches first name, last name, both orderings, title, and role names. UTF-8 lowercasing happens server-side (so `mb_strtolower` runs once per page render, not per keystroke), baked into a `data-search-text` attribute on each card. Croatian diacritics (Veršić, Sršen, Lešić, etc.) match correctly.
+- **Role filter pills** — one pill per role that's actually in use, each in the role's own colour. "All roles" pill resets. The count badge on each pill shows how many speakers carry that role. Pills are role-coloured when active.
+- **Result counter** — header shows `42 / 163 speakers` when a filter is active, updating live as you type.
+- **Empty state** — "No speakers match your search." appears when the combined filter set returns zero results.
+
+Server already sorts speakers by `last_name → first_name` in the repository, so alphabetical-by-surname order was free and the rendered DOM is the source of truth — JS never reorders.
+
+### Internal
+- Per-card metadata: `data-search-text` (searchable strings, UTF-8 lowercased) and `data-role-ids` (comma-separated role UUIDs). Filter loop is substring + set-intersection, no per-keystroke normalization.
+- Combined predicate: `matchesSearch AND matchesRole`. Cards toggle via the `hidden` attribute (cleaner than `display: none` — preserves layout for screen readers).
+- New `setupSpeakers()` initialiser wired into the same DOMContentLoaded pass that boots the schedule shortcodes.
 
 ## [0.8.6] - 2026-05-13
 
