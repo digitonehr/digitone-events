@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-05-13
+
+### Fixed
+- **Print stylesheet is now the time-grid layout, not the mobile-list.** The 0.8.0 attempt swapped the agenda to a mobile-list-style stack on print, but the existing mobile-item markup doesn't have a body wrapper — when forced into a 2-column grid, auto-placement put the type badge into the *next* grid cell next to the time string, causing visible overlap (e.g. *"09:30 → 09:30ARY LECTURE"*). The print output now uses the same multi-column time-grid that the desktop screen renders, with all hall columns visible at once.
+- **Page orientation switched to A4 landscape**, giving the grid breathing room with 5+ halls. Time axis tightened to 14 mm, hall columns share remaining width as `minmax(0, 1fr)` so they don't blow out beyond the page.
+- **Filter is automatically cleared at print time and restored after print** via `beforeprint`/`afterprint` window events. So even if you're staring at *Hall B + Lecture* in the on-screen UI, the printed PDF is the full event programme. After the print dialog closes, your on-screen filter is restored unchanged.
+- **Tighter print typography** so each cell can carry type badge + title + time + speakers without wrapping awkwardly: block title 7.5 pt, type 6 pt, speakers 6.5 pt. Hall headers stay coloured (white on hall colour) and break ribbons stay amber.
+
+### Notes
+- A4 landscape was chosen because conferences with more than 3 halls don't fit comfortably on portrait without each column becoming too narrow. If you want portrait, change `@page { size: A4 landscape }` to `A4 portrait` in your child theme or a custom CSS override.
+- "Background graphics" in the Chrome print dialog should be enabled if your colours don't appear. Modern browsers honour `print-color-adjust: exact` regardless but this toggle is the safety net.
+- Long days may split across two pages of the printed PDF. `page-break-inside: avoid` is set on each session block so individual sessions aren't cut in half.
+
 ## [0.8.0] - 2026-05-13
 
 ### Added — A-bundle continuation: print stylesheet (2/3 of finale)
@@ -145,6 +158,19 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.1] - 2026-05-13
+
+### Fixed
+- **Print stylesheet is now the time-grid layout, not the mobile-list.** The 0.8.0 attempt swapped the agenda to a mobile-list-style stack on print, but the existing mobile-item markup doesn't have a body wrapper — when forced into a 2-column grid, auto-placement put the type badge into the *next* grid cell next to the time string, causing visible overlap (e.g. *"09:30 → 09:30ARY LECTURE"*). The print output now uses the same multi-column time-grid that the desktop screen renders, with all hall columns visible at once.
+- **Page orientation switched to A4 landscape**, giving the grid breathing room with 5+ halls. Time axis tightened to 14 mm, hall columns share remaining width as `minmax(0, 1fr)` so they don't blow out beyond the page.
+- **Filter is automatically cleared at print time and restored after print** via `beforeprint`/`afterprint` window events. So even if you're staring at *Hall B + Lecture* in the on-screen UI, the printed PDF is the full event programme. After the print dialog closes, your on-screen filter is restored unchanged.
+- **Tighter print typography** so each cell can carry type badge + title + time + speakers without wrapping awkwardly: block title 7.5 pt, type 6 pt, speakers 6.5 pt. Hall headers stay coloured (white on hall colour) and break ribbons stay amber.
+
+### Notes
+- A4 landscape was chosen because conferences with more than 3 halls don't fit comfortably on portrait without each column becoming too narrow. If you want portrait, change `@page { size: A4 landscape }` to `A4 portrait` in your child theme or a custom CSS override.
+- "Background graphics" in the Chrome print dialog should be enabled if your colours don't appear. Modern browsers honour `print-color-adjust: exact` regardless but this toggle is the safety net.
+- Long days may split across two pages of the printed PDF. `page-break-inside: avoid` is set on each session block so individual sessions aren't cut in half.
 
 ## [0.8.0] - 2026-05-13
 

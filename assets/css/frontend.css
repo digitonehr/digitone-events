@@ -1480,3 +1480,250 @@ body.de-fe-modal-open {
 		padding-top: 0 !important;
 	}
 }
+
+/* ============================================================ */
+/* PRINT STYLESHEET (v0.8.1) — grid layout, A4 landscape         */
+/* Uses the same multi-column time-grid as the desktop screen.   */
+/* JS beforeprint handler clears any active venue filter so the  */
+/* whole event prints, not just the filtered slice.              */
+/* ============================================================ */
+@media print {
+
+	/* Force color rendering in browsers' print engine */
+	*,
+	*::before,
+	*::after {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	@page {
+		size: A4 landscape;
+		margin: 10mm 8mm;
+	}
+
+	body {
+		font-family: var(--defe-font, "Inter", -apple-system, system-ui, sans-serif);
+		color: #1a1a1a;
+		background: #fff;
+		font-size: 9pt;
+	}
+
+	/* Hide UI chrome */
+	.digitone-events-schedule .de-fe-header-actions,
+	.digitone-events-schedule .de-fe-day-nav,
+	.digitone-events-schedule .de-fe-filters,
+	.digitone-events-schedule .de-fe-session-modal,
+	.digitone-events-schedule .de-fe-mobile-list {
+		display: none !important;
+	}
+
+	/* WP admin bar etc */
+	#wpadminbar {
+		display: none !important;
+	}
+	html.wp-toolbar {
+		margin-top: 0 !important;
+		padding-top: 0 !important;
+	}
+
+	/* Wrapper — break out of theme container */
+	.digitone-events-frontend,
+	.digitone-events-schedule {
+		display: block !important;
+		background: #fff !important;
+		padding: 0 !important;
+		max-width: none !important;
+		margin: 0 !important;
+		box-shadow: none !important;
+	}
+
+	/* Event header */
+	.digitone-events-schedule .de-fe-header {
+		margin: 0 0 4mm !important;
+		padding: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-title {
+		font-size: 14pt !important;
+		font-weight: 800 !important;
+		margin: 0 !important;
+		color: #0f172a !important;
+		letter-spacing: -0.01em;
+	}
+	.digitone-events-schedule .de-fe-event-dates {
+		font-size: 9pt !important;
+		color: #475569 !important;
+		margin-top: 0.5mm !important;
+	}
+	.digitone-events-schedule .de-fe-description {
+		font-size: 8pt !important;
+		color: #475569 !important;
+		margin-top: 1mm !important;
+		line-height: 1.35;
+	}
+
+	/* All days visible — override active-day-only on-screen rule */
+	.digitone-events-schedule .de-fe-schedule-day {
+		display: block !important;
+		page-break-before: always;
+		margin: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-schedule-day:first-of-type {
+		page-break-before: avoid;
+	}
+
+	/* Day header */
+	.digitone-events-schedule .de-fe-day-header {
+		background: #0f172a !important;
+		color: #fff !important;
+		padding: 2.5mm 4mm !important;
+		margin: 0 0 3mm !important;
+		border-radius: 1mm !important;
+		page-break-after: avoid;
+		page-break-inside: avoid;
+		display: flex !important;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 4mm;
+	}
+	.digitone-events-schedule .de-fe-day-header * {
+		color: #fff !important;
+	}
+
+	/* The grid itself: tighter columns + tighter rows to fit landscape A4 */
+	.digitone-events-schedule .de-fe-schedule-grid {
+		display: grid !important;
+		grid-template-columns: 14mm repeat(var(--hall-count), minmax(0, 1fr)) !important;
+		grid-template-rows: 8mm !important;
+		grid-auto-rows: minmax(7mm, auto) !important;
+		gap: 0 !important;
+		background: #fff !important;
+		border: 1px solid #d1d5db !important;
+		border-radius: 1mm !important;
+		overflow: hidden;
+		page-break-inside: auto;
+	}
+
+	/* Reset any inline grid-template-columns set by venue filter */
+	.digitone-events-schedule .de-fe-schedule-grid.is-venue-filtered {
+		grid-template-columns: 14mm repeat(var(--hall-count), minmax(0, 1fr)) !important;
+	}
+
+	/* Hall headers — colored backgrounds */
+	.digitone-events-schedule .de-fe-grid-hall,
+	.digitone-events-schedule .de-fe-grid-hall.is-filtered-out {
+		display: flex !important;
+		background: var(--hall-color, #6b7280) !important;
+		color: #fff !important;
+		padding: 1.5mm 2mm !important;
+		font-size: 8.5pt !important;
+		font-weight: 700 !important;
+		align-items: center;
+		justify-content: center;
+		border: none !important;
+		text-shadow: 0 0.5pt 1pt rgba(0,0,0,0.15) !important;
+	}
+
+	/* Time axis labels — left column */
+	.digitone-events-schedule .de-fe-grid-time {
+		font-size: 7.5pt !important;
+		color: #475569 !important;
+		padding: 0.8mm 1.5mm 0 0 !important;
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+		border-right: 1px solid #e5e7eb !important;
+	}
+
+	/* Session blocks */
+	.digitone-events-schedule .de-fe-block,
+	.digitone-events-schedule .de-fe-block.is-filtered-out {
+		display: flex !important;
+		flex-direction: column;
+		padding: 1mm 1.5mm !important;
+		border: 1px solid #e5e7eb !important;
+		border-left: 2.5pt solid var(--type-color, #6b7280) !important;
+		background: #fff !important;
+		font-size: 7pt !important;
+		page-break-inside: avoid;
+		overflow: hidden;
+		gap: 0.3mm;
+	}
+	.digitone-events-schedule .de-fe-block-type {
+		font-size: 6pt !important;
+		font-weight: 700 !important;
+		color: var(--type-color, #444) !important;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		margin: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-block-title {
+		font-size: 7.5pt !important;
+		font-weight: 700 !important;
+		color: #0f172a !important;
+		line-height: 1.15 !important;
+		margin: 0 !important;
+		-webkit-line-clamp: unset !important;
+		display: block !important;
+		overflow: visible !important;
+	}
+	.digitone-events-schedule .de-fe-block-time {
+		font-size: 6.5pt !important;
+		color: #6b7280 !important;
+		font-variant-numeric: tabular-nums;
+		margin: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-block-speakers {
+		font-size: 6.5pt !important;
+		color: #1f2937 !important;
+		line-height: 1.25 !important;
+		margin: 0 !important;
+		-webkit-line-clamp: unset !important;
+		display: block !important;
+		overflow: visible !important;
+	}
+	.digitone-events-schedule .de-fe-block-more {
+		color: #6b7280 !important;
+		font-weight: 600;
+	}
+
+	/* Break ribbon spans all halls — keep cheerful amber */
+	.digitone-events-schedule .de-fe-block.is-break {
+		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+		border: 1px solid #fbbf24 !important;
+		border-left: 0 !important;
+		flex-direction: row !important;
+		align-items: center;
+		justify-content: center;
+		gap: 3mm;
+		padding: 1mm 3mm !important;
+	}
+	.digitone-events-schedule .de-fe-block.is-break .de-fe-block-type {
+		color: #92400e !important;
+		font-size: 6.5pt !important;
+	}
+	.digitone-events-schedule .de-fe-block.is-break .de-fe-block-title {
+		font-size: 8pt !important;
+		color: #78350f !important;
+	}
+	.digitone-events-schedule .de-fe-block.is-break .de-fe-block-time {
+		color: #92400e !important;
+		font-size: 7pt !important;
+	}
+
+	/* Strip decorative effects */
+	.digitone-events-schedule *,
+	.digitone-events-schedule *::before,
+	.digitone-events-schedule *::after {
+		box-shadow: none !important;
+		animation: none !important;
+		transition: none !important;
+	}
+
+	.digitone-events-schedule a {
+		color: inherit !important;
+		text-decoration: none !important;
+	}
+	.digitone-events-schedule a::after {
+		content: none !important;
+	}
+}

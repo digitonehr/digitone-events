@@ -595,6 +595,43 @@
 			} );
 		}
 
+		/* Print handler — when the user prints the page, we temporarily clear
+		 * the filter so the printed PDF shows the whole event (printed program
+		 * is a reference document, not a filtered slice). State is restored
+		 * after print so the on-screen UI is unchanged. */
+		let savedFilter = null;
+		window.addEventListener( 'beforeprint', function () {
+			savedFilter = {
+				primary:  currentPrimary,
+				sub:      currentSub,
+				type:     currentTypeId,
+				speaker:  currentSpeakerId,
+				search:   currentSearch,
+				input:    searchEl   ? searchEl.value   : '',
+				selValue: speakerSel ? speakerSel.value : '',
+			};
+			currentPrimary   = '';
+			currentSub       = '';
+			currentTypeId    = '';
+			currentSpeakerId = '';
+			currentSearch    = '';
+			if ( searchEl )   searchEl.value   = '';
+			if ( speakerSel ) speakerSel.value = '';
+			apply();
+		} );
+		window.addEventListener( 'afterprint', function () {
+			if ( ! savedFilter ) return;
+			currentPrimary   = savedFilter.primary;
+			currentSub       = savedFilter.sub;
+			currentTypeId    = savedFilter.type;
+			currentSpeakerId = savedFilter.speaker;
+			currentSearch    = savedFilter.search;
+			if ( searchEl )   searchEl.value   = savedFilter.input;
+			if ( speakerSel ) speakerSel.value = savedFilter.selValue;
+			apply();
+			savedFilter = null;
+		} );
+
 		// Default state: no filter.
 		apply();
 	}
