@@ -28,14 +28,16 @@ $fmt = function ( int $m ) : string {
 // Determine the global hall set used across the event.
 $all_halls       = [];
 $all_halls_order = [];
+$hall_primary    = []; // sub_venue_id => primary venue_id (needed for primary-level filtering)
 foreach ( $sessions_by_day as $sessions ) {
 	foreach ( $sessions as $s ) {
 		$hid   = $s['sub_venue_id'] ?? null;
 		$hname = $s['sub_venue_name'] ?? null;
 		if ( ! $hid || ! $hname ) continue;
 		if ( ! isset( $all_halls[ $hid ] ) ) {
-			$all_halls[ $hid ] = $hname;
-			$all_halls_order[] = $hid;
+			$all_halls[ $hid ]    = $hname;
+			$all_halls_order[]    = $hid;
+			$hall_primary[ $hid ] = $s['venue_id'] ?? '';
 		}
 	}
 }
@@ -267,7 +269,7 @@ $slot_minutes = 30;
 						<div class="de-fe-grid-corner" style="grid-row: 1; grid-column: 1"></div>
 
 						<?php foreach ( $all_halls_order as $hid ) : ?>
-							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" data-original-grid-column="<?php echo (int) $hall_col[ $hid ]; ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>; --hall-color: <?php echo esc_attr( $hall_color[ $hid ] ); ?>">
+							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" data-venue-id="<?php echo esc_attr( $hall_primary[ $hid ] ?? '' ); ?>" data-original-grid-column="<?php echo (int) $hall_col[ $hid ]; ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>; --hall-color: <?php echo esc_attr( $hall_color[ $hid ] ); ?>">
 								<?php echo esc_html( $all_halls[ $hid ] ); ?>
 							</div>
 						<?php endforeach; ?>

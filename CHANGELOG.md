@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.8] - 2026-05-13
+
+### Changed
+- **Desktop grid now physically resizes to the filter's column count instead of just hiding tracks.**
+  Previously a primary-level filter (e.g. "Sheraton" with 4 halls) collapsed only when you also picked a specific sub-venue. Without a sub, the grid kept all 5 column tracks (Hall A · Hall B · Hall C · Hall D · sub-test 2) and just visually hid the non-matching one — leaving an awkward blank column.
+  Now the JS:
+  1. Collects only the hall headers that match the active filter,
+  2. Sorts them by their original column position,
+  3. Re-indexes them as columns 2 to N+1,
+  4. Sets `grid-template-columns` to `70px repeat(N, minmax(200px, 1fr))`,
+  5. Re-maps every visible block + header to its new column.
+  Result: Sheraton with 4 halls → 4 columns, Test venue with 1 hall → 1 column, full event → 5 columns. Sub-level filter still collapses to a single column. Breaks span all visible columns via `grid-column: 2 / -1` regardless of count.
+
+### Internal
+- Hall headers now carry `data-venue-id` (the primary venue id) in addition to `data-sub-venue-id`. Built from a new `$hall_primary` map in `agenda.php` so primary-level matching also works for header elements.
+- The sub-vs-primary branch in `apply()` was deleted. One unified path now computes the matching sub set, builds a column remap, and rewrites grid template + element columns. The same code path handles both filter modes — fewer special cases, fewer chances for the two paths to drift.
+
 ## [0.7.7] - 2026-05-13
 
 ### Added
@@ -88,6 +105,23 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.8] - 2026-05-13
+
+### Changed
+- **Desktop grid now physically resizes to the filter's column count instead of just hiding tracks.**
+  Previously a primary-level filter (e.g. "Sheraton" with 4 halls) collapsed only when you also picked a specific sub-venue. Without a sub, the grid kept all 5 column tracks (Hall A · Hall B · Hall C · Hall D · sub-test 2) and just visually hid the non-matching one — leaving an awkward blank column.
+  Now the JS:
+  1. Collects only the hall headers that match the active filter,
+  2. Sorts them by their original column position,
+  3. Re-indexes them as columns 2 to N+1,
+  4. Sets `grid-template-columns` to `70px repeat(N, minmax(200px, 1fr))`,
+  5. Re-maps every visible block + header to its new column.
+  Result: Sheraton with 4 halls → 4 columns, Test venue with 1 hall → 1 column, full event → 5 columns. Sub-level filter still collapses to a single column. Breaks span all visible columns via `grid-column: 2 / -1` regardless of count.
+
+### Internal
+- Hall headers now carry `data-venue-id` (the primary venue id) in addition to `data-sub-venue-id`. Built from a new `$hall_primary` map in `agenda.php` so primary-level matching also works for header elements.
+- The sub-vs-primary branch in `apply()` was deleted. One unified path now computes the matching sub set, builds a column remap, and rewrites grid template + element columns. The same code path handles both filter modes — fewer special cases, fewer chances for the two paths to drift.
 
 ## [0.7.7] - 2026-05-13
 

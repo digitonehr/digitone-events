@@ -375,20 +375,37 @@
 					return;
 				}
 
-				const range = computeRange( blocks );
+				// FILTER ACTIVE — unified logic for both "sub" and "primary" modes:
+				// 1) Walk hall headers, collect ones that match the current filter
+				//    (matchesFilter handles both sub_venue_id and venue_id).
+				// 2) Sort matching subs by their original column position so visual
+				//    order stays stable.
+				// 3) Re-index them as columns 2..N+1 and build a sub_id → new column map.
+				// 4) Apply that map to every visible block + hall header so the
+				//    grid has exactly N columns, no empty tracks.
+				const matchingSubs = [];
+				headers.forEach( function ( h ) {
+					if ( ! matchesFilter( h ) ) return;
+					const subId  = h.getAttribute( 'data-sub-venue-id' );
+					const origCol = parseInt( h.getAttribute( 'data-original-grid-column' ), 10 ) || 0;
+					matchingSubs.push( { id: subId, origCol: origCol, header: h } );
+				} );
+				matchingSubs.sort( function ( a, b ) { return a.origCol - b.origCol; } );
+
+				const subColMap = new Map();
+				matchingSubs.forEach( function ( s, i ) { subColMap.set( s.id, i + 2 ); } );
+				const numCols = matchingSubs.length;
 
 				grid.classList.add( 'is-venue-filtered' );
-
-				// If filtering to a single sub-venue, collapse to one column.
-				// If filtering by primary (which may have multiple subs), keep multi-column layout
-				// but hide non-matching columns.
-				if ( currentSub ) {
-					grid.style.gridTemplateColumns = '70px minmax(200px, 1fr)';
-				} else {
+				if ( numCols === 0 ) {
 					grid.style.gridTemplateColumns = '';
+				} else {
+					grid.style.gridTemplateColumns = '70px repeat(' + numCols + ', minmax(200px, 1fr))';
 				}
 
+				const range = computeRange( blocks );
 				const seenBreaks = new Set();
+
 				blocks.forEach( function ( b ) {
 					const isBreak = b.classList.contains( 'is-break' );
 					if ( isBreak ) {
@@ -406,13 +423,13 @@
 							b.classList.add( 'is-filtered-out' );
 						}
 					} else if ( matchesFilter( b ) ) {
-						b.classList.remove( 'is-filtered-out' );
-						if ( currentSub ) {
-							b.style.gridColumn = '2';
+						const subId = b.getAttribute( 'data-sub-venue-id' );
+						const newCol = subColMap.get( subId );
+						if ( newCol !== undefined ) {
+							b.style.gridColumn = String( newCol );
+							b.classList.remove( 'is-filtered-out' );
 						} else {
-							// Primary-only filter: restore original column position.
-							const orig = b.getAttribute( 'data-original-grid-column' );
-							if ( orig ) b.style.gridColumn = orig;
+							b.classList.add( 'is-filtered-out' );
 						}
 					} else {
 						b.classList.add( 'is-filtered-out' );
@@ -420,15 +437,13 @@
 				} );
 
 				headers.forEach( function ( h ) {
-					const isMatch = matchesFilter( h );
-					h.classList.toggle( 'is-filtered-out', ! isMatch );
-					if ( isMatch ) {
-						if ( currentSub ) {
-							h.style.gridColumn = '2';
-						} else {
-							const orig = h.getAttribute( 'data-original-grid-column' );
-							if ( orig ) h.style.gridColumn = orig;
-						}
+					const subId = h.getAttribute( 'data-sub-venue-id' );
+					const newCol = subColMap.get( subId );
+					if ( newCol !== undefined ) {
+						h.style.gridColumn = String( newCol );
+						h.classList.remove( 'is-filtered-out' );
+					} else {
+						h.classList.add( 'is-filtered-out' );
 					}
 				} );
 			} );
