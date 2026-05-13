@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-05-13
+
+### Fixed
+- **Speaker photo picker now usable.** Clicking "Choose from library" in the speaker edit modal previously opened the WP media library *underneath* our modal, making it un-clickable. Root cause: the modal uses the native `<dialog>` element, which renders on the browser's *top layer* — above every z-indexed element on the page, including WP's media frame. Fix: when "Choose from library" is clicked, we now close our dialog (form values are preserved in the DOM), let the WP media library run as the only foreground modal, then reopen our dialog when the library closes (select or cancel). The selected URL flows back into the photo field as before.
+
 ## [0.5.9] - 2026-05-12
 
 ### Fixed

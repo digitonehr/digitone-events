@@ -53,6 +53,11 @@
 		if ( photoClear ) photoClear.addEventListener( 'click', function () { photoUrl.value = ''; updatePhotoPreview(); } );
 
 		// WP media library
+		// Native <dialog> renders on the browser's "top layer", above any
+		// z-indexed elements — including the WP media frame. To make the
+		// library actually usable, we close our dialog before opening the
+		// frame and reopen it once the frame closes (with or without a
+		// selection). Form values stay in the DOM so nothing is lost.
 		if ( photoPick && typeof wp !== 'undefined' && wp.media ) {
 			let frame = null;
 			photoPick.addEventListener( 'click', function () {
@@ -68,6 +73,16 @@
 						photoUrl.value = attachment.url;
 						updatePhotoPreview();
 					} );
+					frame.on( 'close', function () {
+						// Reopen our dialog after the library closes.
+						if ( modal && typeof modal.showModal === 'function' && ! modal.open ) {
+							try { modal.showModal(); } catch ( e ) { /* already open */ }
+						}
+					} );
+				}
+				// Close our dialog so the media frame is reachable.
+				if ( modal && modal.open && typeof modal.close === 'function' ) {
+					modal.close();
 				}
 				frame.open();
 			} );
