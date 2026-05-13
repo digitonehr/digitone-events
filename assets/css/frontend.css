@@ -394,6 +394,42 @@
 		border-left: 3px solid var(--type-color, var(--defe-text-muted));
 		border-radius: var(--defe-radius-sm);
 	}
+	.de-fe-mobile-item[data-session-id] {
+		cursor: pointer;
+		transition: background 0.15s ease, transform 0.12s ease;
+	}
+	.de-fe-mobile-item[data-session-id]:hover,
+	.de-fe-mobile-item[data-session-id]:focus-visible {
+		background: var(--defe-bg-alt);
+		outline: none;
+	}
+	.de-fe-mobile-item[data-session-id]:focus-visible {
+		box-shadow: 0 0 0 2px var(--defe-primary);
+	}
+	.de-fe-mobile-item.is-break {
+		background: var(--defe-bg-soft);
+		border-left-width: 0;
+		grid-template-columns: 1fr;
+		justify-items: center;
+		padding: 8px 14px;
+		font-size: 12px;
+		color: var(--defe-text-soft);
+	}
+	.de-fe-mobile-item.is-break .de-fe-mobile-time {
+		font-size: 11px;
+		color: var(--defe-text-soft);
+		padding-top: 0;
+	}
+	.de-fe-mobile-speakers {
+		font-size: 12px;
+		color: var(--defe-text-soft);
+		margin-top: 4px;
+		line-height: 1.4;
+	}
+	.de-fe-mobile-more {
+		color: var(--defe-text-muted);
+		font-weight: 600;
+	}
 	.de-fe-mobile-time {
 		font-size: 12px;
 		font-weight: 600;

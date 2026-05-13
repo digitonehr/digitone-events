@@ -119,23 +119,23 @@
 			}
 		}
 
-		// Click on a session block → open modal
+		// Click on a session block (desktop grid) OR mobile-item → open modal
 		schedule.addEventListener( 'click', function ( ev ) {
-			const block = ev.target.closest( '.de-fe-block' );
-			if ( ! block || block.classList.contains( 'is-break' ) ) return;
-			const sid = block.getAttribute( 'data-session-id' );
+			const target = ev.target.closest( '.de-fe-block, .de-fe-mobile-item' );
+			if ( ! target || target.classList.contains( 'is-break' ) ) return;
+			const sid = target.getAttribute( 'data-session-id' );
 			if ( ! sid ) return;
 			ev.preventDefault();
 			open( sid );
 		} );
 
-		// Enter / Space on a focused block → open
+		// Enter / Space on a focused block/mobile-item → open
 		schedule.addEventListener( 'keydown', function ( ev ) {
-			const block = ev.target.closest( '.de-fe-block' );
-			if ( ! block || block.classList.contains( 'is-break' ) ) return;
+			const target = ev.target.closest( '.de-fe-block, .de-fe-mobile-item' );
+			if ( ! target || target.classList.contains( 'is-break' ) ) return;
 			if ( ev.key !== 'Enter' && ev.key !== ' ' ) return;
 			ev.preventDefault();
-			const sid = block.getAttribute( 'data-session-id' );
+			const sid = target.getAttribute( 'data-session-id' );
 			if ( sid ) open( sid );
 		} );
 

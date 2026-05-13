@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-05-13
+
+### Fixed
+- **Session detail modal now opens from the mobile list too.** Previously the click handler only matched `.de-fe-block` (desktop grid items), so on phones the modal never opened because the responsive view renders `.de-fe-mobile-item` instead. Both elements now share the same click + keyboard handling.
+
+### Changed
+- **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
+- Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
+- Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
 ## [0.7.0] - 2026-05-13
 
 ### Added — Frontend UX bundle, part 1 of 2 (calendar + detail modal)

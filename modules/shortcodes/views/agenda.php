@@ -235,10 +235,18 @@ $slot_minutes = 30;
 								$time = DigitOne_Events_Helpers_Format::time_display( $s['start_time'] );
 								if ( ! empty( $s['end_time'] ) ) $time .= ' – ' . DigitOne_Events_Helpers_Format::time_display( $s['end_time'] );
 							}
-							$venue = $s['sub_venue_name'] ?? '';
-							$color = $s['type_color'] ?? '#6b7280';
+							$venue       = $s['sub_venue_name'] ?? '';
+							$color       = $s['type_color'] ?? '#6b7280';
+							$is_break_mi = ! empty( $s['type_name'] ) && strtolower( $s['type_name'] ) === 'break';
+							$speakers_mi = $s['speakers'] ?? [];
 						?>
-							<li class="de-fe-mobile-item" style="--type-color: <?php echo esc_attr( $color ); ?>">
+							<li class="de-fe-mobile-item<?php echo $is_break_mi ? ' is-break' : ''; ?>"
+								style="--type-color: <?php echo esc_attr( $color ); ?>"
+								<?php if ( ! $is_break_mi ) : ?>
+								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
+								tabindex="0"
+								role="button"
+								<?php endif; ?>>
 								<div class="de-fe-mobile-time"><?php echo esc_html( $time ); ?></div>
 								<div class="de-fe-mobile-body">
 									<?php if ( $type_label ) : ?>
@@ -247,6 +255,20 @@ $slot_minutes = 30;
 									<div class="de-fe-mobile-title"><?php echo esc_html( $s['title'] ); ?></div>
 									<?php if ( $venue ) : ?>
 										<div class="de-fe-mobile-venue"><?php echo esc_html( $venue ); ?></div>
+									<?php endif; ?>
+									<?php if ( ! empty( $speakers_mi ) && ! $is_break_mi ) : ?>
+										<div class="de-fe-mobile-speakers">
+											<?php
+											$names_mi = [];
+											foreach ( array_slice( $speakers_mi, 0, 3 ) as $sp ) {
+												$names_mi[] = trim( $sp['first_name'] . ' ' . $sp['last_name'] );
+											}
+											echo esc_html( implode( ' · ', $names_mi ) );
+											if ( count( $speakers_mi ) > 3 ) {
+												printf( ' <span class="de-fe-mobile-more">+%d</span>', count( $speakers_mi ) - 3 );
+											}
+											?>
+										</div>
 									<?php endif; ?>
 								</div>
 							</li>
