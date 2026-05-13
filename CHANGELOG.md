@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-05-13
+
+### Changed — "Export to PDF" now produces a real PDF file (no print dialog)
+
+- The button no longer routes through `window.print()` + browser save-as-PDF. It now generates the PDF **client-side** via `html2pdf.js` (a bundled wrapper around jsPDF + html2canvas, ~150 KB), which downloads the file directly as `<Event Name> — Programme.pdf`. One click → file on disk. No print dialog, no "Save" confirmation step.
+- The library is **lazy-loaded from cdnjs** on the first click and cached by the browser afterward, so the plugin zip itself stays small. No Composer dependency, no shell binaries, no server-side PDF library to install.
+- During generation the button shows a small spinner and "Generating PDF…" label. On error it logs to the console and shows a brief alert; the page is otherwise untouched.
+
+### Internal — how the off-screen render works
+- The whole `.digitone-events-schedule` element is cloned into an absolutely-positioned wrapper at `left: -99999px`. UI chrome (filters, day-nav, action buttons, session modal) and the screen-only layouts (grid + mobile list) are stripped from the clone; every day is forced visible (`.is-active`); the print tables stay.
+- The clone receives a new `.de-fe-pdf-context` class. To avoid CSS duplication, a runtime helper (`installPdfContextStyles`) reads every rule inside any `@media (... print ...)` block in the loaded stylesheets, scopes each selector under `.de-fe-pdf-context`, and emits the mirror as a single `<style id="de-fe-pdf-ctx-styles">`. The `@media print` source stays the single source of truth.
+- `html2pdf.js` then renders the wrapper via html2canvas (scale 2 for sharpness) and assembles the resulting bitmap into an A4 landscape PDF (8 mm margins, JPEG quality 0.95, jsPDF compression). `pagebreak.avoid` is set to `tr, .de-fe-print-td-session, .de-fe-print-td-break, .de-fe-day-header` so sessions, breaks, and day headers don't get split across pages.
+- The wrapper is removed in a `finally` block so a failed/cancelled generation doesn't leak DOM.
+
+### Notes & trade-offs
+- The output is a **rasterized PDF** (each page is a high-res image). Text inside the PDF is therefore not selectable or searchable. The trade-off is layout fidelity: whatever your browser would have shown via `@media print` is exactly what ends up in the PDF — including the colored hall headers, type colors, and Croatian diacritics (ć, č, š, ž, đ) which would have required custom font embedding in a text-mode jsPDF flow.
+- Filesize for a 3-day, ~60-session program is roughly 1.5–3 MB.
+- The first click after a page load triggers a one-off ~150 KB fetch from cdnjs; subsequent clicks reuse the cached library. If a site has a strict CSP that forbids cdnjs, the admin can either relax `script-src` to allow `cdnjs.cloudflare.com` or self-host html2pdf.js and override `HTML2PDF_CDN` (currently a constant near the top of `setupExportPdf` in `assets/js/frontend.js`).
+
+## [0.8.2] - 2026-05-13
+
+### Added — "Export to PDF" button + proper page break logic
+
+- **New "Export to PDF" button** next to "Add to calendar" in the agenda header. Click triggers the browser's print dialog with `document.title` temporarily set to `<Event Name> — Programme`, so when you choose *Save as PDF* the suggested filename is sensible. After printing the title is restored.
+- **Print output now uses a CSS `<table>`** instead of the on-screen CSS Grid. The grid layout doesn't fragment cleanly across printed pages — CSS Grid was never designed for paged media, which is why the 0.8.1 output had day headers stranded alone on a page with content overflowing onto the next. Tables, on the other hand, are the original paged-media browser layout primitive:
+  - `<thead>` with the coloured hall headers **auto-repeats on every printed page**. So if Day 2 spills onto a second page, the second page starts with the hall headers again — exactly the behaviour you'd expect from a printed conference programme.
+  - Every `<td>` (every session block, every break) has `break-inside: avoid` + `page-break-inside: avoid` so a session is **never split across two pages**. If a session won't fit at the bottom of the current page it gets pushed to the next page in its entirety.
+
+### Internal
+- Per day, PHP builds a server-side map of which slot × hall combinations contain a session start, which are mid-session continuations (and therefore covered by rowspan from above), and where breaks fall. Then it emits one `<tr>` per time slot with proper `rowspan` on multi-slot sessions and `colspan`-less per-hall break cells (the break label appears in the first non-continuation column, which keeps multi-hour sessions running through breaks like Hall D's workshop visible).
+- The print table is in the DOM at all times but hidden with `display: none` on screen; only `@media print` flips it to `display: table`. On-screen grid is hidden in the inverse direction. No JS needed to swap layouts.
+- The 0.8.1 `beforeprint`/`afterprint` filter-reset handlers were removed — the print table is built server-side from the full event data and is unaffected by any UI filter, so there's nothing to reset.
+
+### Notes
+- A4 landscape. Background graphics ON in Chrome's print dialog (modern browsers honour `print-color-adjust: exact` regardless but this toggle is the safety net).
+- Server-side fully-automatic PDF generation (single-click download, no print dialog) was considered but would have required bundling dompdf or mPDF (3–10 MB of dependency) and isn't possible in the current build environment without network access. The button + browser-print flow needs one extra click (the *Save* button in the print dialog) but the layout fidelity is much better than 0.8.1.
+
 ## [0.8.1] - 2026-05-13
 
 ### Fixed
@@ -158,6 +195,43 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.3] - 2026-05-13
+
+### Changed — "Export to PDF" now produces a real PDF file (no print dialog)
+
+- The button no longer routes through `window.print()` + browser save-as-PDF. It now generates the PDF **client-side** via `html2pdf.js` (a bundled wrapper around jsPDF + html2canvas, ~150 KB), which downloads the file directly as `<Event Name> — Programme.pdf`. One click → file on disk. No print dialog, no "Save" confirmation step.
+- The library is **lazy-loaded from cdnjs** on the first click and cached by the browser afterward, so the plugin zip itself stays small. No Composer dependency, no shell binaries, no server-side PDF library to install.
+- During generation the button shows a small spinner and "Generating PDF…" label. On error it logs to the console and shows a brief alert; the page is otherwise untouched.
+
+### Internal — how the off-screen render works
+- The whole `.digitone-events-schedule` element is cloned into an absolutely-positioned wrapper at `left: -99999px`. UI chrome (filters, day-nav, action buttons, session modal) and the screen-only layouts (grid + mobile list) are stripped from the clone; every day is forced visible (`.is-active`); the print tables stay.
+- The clone receives a new `.de-fe-pdf-context` class. To avoid CSS duplication, a runtime helper (`installPdfContextStyles`) reads every rule inside any `@media (... print ...)` block in the loaded stylesheets, scopes each selector under `.de-fe-pdf-context`, and emits the mirror as a single `<style id="de-fe-pdf-ctx-styles">`. The `@media print` source stays the single source of truth.
+- `html2pdf.js` then renders the wrapper via html2canvas (scale 2 for sharpness) and assembles the resulting bitmap into an A4 landscape PDF (8 mm margins, JPEG quality 0.95, jsPDF compression). `pagebreak.avoid` is set to `tr, .de-fe-print-td-session, .de-fe-print-td-break, .de-fe-day-header` so sessions, breaks, and day headers don't get split across pages.
+- The wrapper is removed in a `finally` block so a failed/cancelled generation doesn't leak DOM.
+
+### Notes & trade-offs
+- The output is a **rasterized PDF** (each page is a high-res image). Text inside the PDF is therefore not selectable or searchable. The trade-off is layout fidelity: whatever your browser would have shown via `@media print` is exactly what ends up in the PDF — including the colored hall headers, type colors, and Croatian diacritics (ć, č, š, ž, đ) which would have required custom font embedding in a text-mode jsPDF flow.
+- Filesize for a 3-day, ~60-session program is roughly 1.5–3 MB.
+- The first click after a page load triggers a one-off ~150 KB fetch from cdnjs; subsequent clicks reuse the cached library. If a site has a strict CSP that forbids cdnjs, the admin can either relax `script-src` to allow `cdnjs.cloudflare.com` or self-host html2pdf.js and override `HTML2PDF_CDN` (currently a constant near the top of `setupExportPdf` in `assets/js/frontend.js`).
+
+## [0.8.2] - 2026-05-13
+
+### Added — "Export to PDF" button + proper page break logic
+
+- **New "Export to PDF" button** next to "Add to calendar" in the agenda header. Click triggers the browser's print dialog with `document.title` temporarily set to `<Event Name> — Programme`, so when you choose *Save as PDF* the suggested filename is sensible. After printing the title is restored.
+- **Print output now uses a CSS `<table>`** instead of the on-screen CSS Grid. The grid layout doesn't fragment cleanly across printed pages — CSS Grid was never designed for paged media, which is why the 0.8.1 output had day headers stranded alone on a page with content overflowing onto the next. Tables, on the other hand, are the original paged-media browser layout primitive:
+  - `<thead>` with the coloured hall headers **auto-repeats on every printed page**. So if Day 2 spills onto a second page, the second page starts with the hall headers again — exactly the behaviour you'd expect from a printed conference programme.
+  - Every `<td>` (every session block, every break) has `break-inside: avoid` + `page-break-inside: avoid` so a session is **never split across two pages**. If a session won't fit at the bottom of the current page it gets pushed to the next page in its entirety.
+
+### Internal
+- Per day, PHP builds a server-side map of which slot × hall combinations contain a session start, which are mid-session continuations (and therefore covered by rowspan from above), and where breaks fall. Then it emits one `<tr>` per time slot with proper `rowspan` on multi-slot sessions and `colspan`-less per-hall break cells (the break label appears in the first non-continuation column, which keeps multi-hour sessions running through breaks like Hall D's workshop visible).
+- The print table is in the DOM at all times but hidden with `display: none` on screen; only `@media print` flips it to `display: table`. On-screen grid is hidden in the inverse direction. No JS needed to swap layouts.
+- The 0.8.1 `beforeprint`/`afterprint` filter-reset handlers were removed — the print table is built server-side from the full event data and is unaffected by any UI filter, so there's nothing to reset.
+
+### Notes
+- A4 landscape. Background graphics ON in Chrome's print dialog (modern browsers honour `print-color-adjust: exact` regardless but this toggle is the safety net).
+- Server-side fully-automatic PDF generation (single-click download, no print dialog) was considered but would have required bundling dompdf or mPDF (3–10 MB of dependency) and isn't possible in the current build environment without network access. The button + browser-print flow needs one extra click (the *Save* button in the print dialog) but the layout fidelity is much better than 0.8.1.
 
 ## [0.8.1] - 2026-05-13
 

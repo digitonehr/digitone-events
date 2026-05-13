@@ -12,6 +12,7 @@
 		swapTitle( schedule );
 		setupSessionModal( schedule );
 		setupFilters( schedule );
+		setupExportPdf( schedule );
 	}
 
 	/* ============================================================
@@ -234,6 +235,176 @@
 	 * dimension matches. Column layout is driven by venue filter only — other
 	 * filters affect block visibility within the existing columns.
 	 * ============================================================ */
+
+	/* ============================================================
+	 * Export to PDF button — sets a friendly document.title so the
+	 * browser's "Save as PDF" dialog suggests a sensible filename,
+	 * then triggers window.print(). Title is restored after.
+	 * ============================================================ */
+	/* ============================================================
+	 * Export to PDF — client-side PDF generation (v0.8.3).
+	 *
+	 * Lazy-loads html2pdf.js (bundle of jsPDF + html2canvas, ~150 KB)
+	 * from cdnjs on first click. After clone & off-screen render the
+	 * file downloads with a sensible filename. No print dialog, no
+	 * server-side dependency, no Composer.
+	 *
+	 * The cloned schedule receives a `.de-fe-pdf-context` class; CSS
+	 * rules mirroring @media print are scoped under that class (the
+	 * mirror is generated at runtime by `installPdfContextStyles` —
+	 * the @media print block stays the single source of truth).
+	 * ============================================================ */
+	const HTML2PDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+
+	function setupExportPdf( schedule ) {
+		const btn = schedule.querySelector( '[data-de-export-pdf]' );
+		if ( ! btn ) return;
+
+		const title = schedule.querySelector( '.de-fe-title' );
+		const eventName = title ? title.textContent.trim() : 'Programme';
+
+		btn.addEventListener( 'click', async function () {
+			const original = btn.innerHTML;
+			btn.disabled = true;
+			btn.innerHTML = '<span class="de-fe-spinner" aria-hidden="true"></span> ' + 'Generating PDF…';
+
+			try {
+				await generatePdf( schedule, eventName );
+			} catch ( err ) {
+				// eslint-disable-next-line no-console
+				console.error( '[digitone-events] PDF generation failed:', err );
+				window.alert( 'PDF generation failed. Check the browser console for details.' );
+			} finally {
+				btn.disabled = false;
+				btn.innerHTML = original;
+			}
+		} );
+	}
+
+	function loadScriptOnce( src ) {
+		return new Promise( function ( resolve, reject ) {
+			if ( document.querySelector( 'script[data-de-pdf-lib="1"]' ) ) {
+				resolve();
+				return;
+			}
+			const s = document.createElement( 'script' );
+			s.src = src;
+			s.async = true;
+			s.setAttribute( 'data-de-pdf-lib', '1' );
+			s.onload = function () { resolve(); };
+			s.onerror = function () { reject( new Error( 'Failed to load ' + src ) ); };
+			document.head.appendChild( s );
+		} );
+	}
+
+	/* Read every rule inside any @media block whose condition contains
+	 * "print", and emit the same rule scoped under .de-fe-pdf-context.
+	 * Source of truth stays in the @media print block — we just project
+	 * it into a class selector so off-screen rendering picks it up. */
+	function installPdfContextStyles() {
+		if ( document.getElementById( 'de-fe-pdf-ctx-styles' ) ) return;
+
+		let css = '';
+		const sheets = document.styleSheets;
+		for ( let i = 0; i < sheets.length; i++ ) {
+			let rules;
+			try { rules = sheets[ i ].cssRules || sheets[ i ].rules; }
+			catch ( e ) { continue; } // CORS-locked sheet
+			if ( ! rules ) continue;
+
+			for ( let j = 0; j < rules.length; j++ ) {
+				const r = rules[ j ];
+				if ( r.type !== 4 /* MEDIA_RULE */ ) continue;
+				const cond = ( r.conditionText || r.media.mediaText || '' );
+				if ( cond.indexOf( 'print' ) === -1 ) continue;
+
+				for ( let k = 0; k < r.cssRules.length; k++ ) {
+					const inner = r.cssRules[ k ];
+					if ( inner.type !== 1 /* STYLE_RULE */ ) continue;
+					const selectors = inner.selectorText.split( ',' ).map( function ( s ) {
+						return scopePdfSelector( s.trim() );
+					} );
+					css += selectors.join( ', ' ) + ' { ' + inner.style.cssText + ' }\n';
+				}
+			}
+		}
+
+		const tag = document.createElement( 'style' );
+		tag.id = 'de-fe-pdf-ctx-styles';
+		tag.textContent = css;
+		document.head.appendChild( tag );
+	}
+
+	function scopePdfSelector( sel ) {
+		// `body` / `html` rules don't make sense in a cloned subtree — apply to the context root itself
+		if ( sel === 'body' || sel === 'html' ) return '.de-fe-pdf-context';
+		if ( sel === '*' || sel === '*::before' || sel === '*::after' ) return '.de-fe-pdf-context ' + sel;
+		return '.de-fe-pdf-context ' + sel;
+	}
+
+	async function generatePdf( schedule, eventName ) {
+		await loadScriptOnce( HTML2PDF_CDN );
+		if ( typeof window.html2pdf !== 'function' ) {
+			throw new Error( 'html2pdf.js failed to load' );
+		}
+
+		installPdfContextStyles();
+
+		// Off-screen render container
+		const wrapper = document.createElement( 'div' );
+		wrapper.style.cssText = 'position:absolute;left:-99999px;top:0;width:1120px;background:#fff;z-index:-1;';
+
+		const clone = schedule.cloneNode( true );
+		clone.classList.add( 'de-fe-pdf-context' );
+
+		// Strip UI chrome from the clone — buttons, filters, day-nav,
+		// session modal, screen-only grid, mobile list. The print table
+		// stays and (thanks to the pdf-context class) becomes visible.
+		clone.querySelectorAll(
+			'.de-fe-day-nav, .de-fe-filters, .de-fe-header-actions, .de-fe-session-modal, ' +
+			'.de-fe-schedule-grid, .de-fe-mobile-list, script'
+		).forEach( function ( el ) { el.remove(); } );
+
+		// Force every day visible (otherwise only the active one renders)
+		clone.querySelectorAll( '.de-fe-schedule-day' ).forEach( function ( day ) {
+			day.classList.add( 'is-active' );
+			day.setAttribute( 'aria-hidden', 'false' );
+		} );
+
+		wrapper.appendChild( clone );
+		document.body.appendChild( wrapper );
+
+		// Give the layout engine a tick to apply the cascaded styles
+		await new Promise( function ( r ) { setTimeout( r, 150 ); } );
+
+		try {
+			await window.html2pdf().set( {
+				margin:    [ 8, 8, 10, 8 ],
+				filename:  eventName + ' — Programme.pdf',
+				image:     { type: 'jpeg', quality: 0.95 },
+				html2canvas: {
+					scale: 2,
+					useCORS: true,
+					backgroundColor: '#ffffff',
+					letterRendering: true,
+					logging: false
+				},
+				jsPDF: {
+					unit: 'mm',
+					format: 'a4',
+					orientation: 'landscape',
+					compress: true
+				},
+				pagebreak: {
+					mode:  [ 'css', 'legacy' ],
+					avoid: [ '.de-fe-print-td-session', '.de-fe-print-td-break', '.de-fe-day-header', 'tr' ]
+				}
+			} ).from( clone ).save();
+		} finally {
+			wrapper.remove();
+		}
+	}
+
 	function setupFilters( schedule ) {
 		const primaryNav = schedule.querySelector( '.de-fe-primary-nav' );
 		const venueNav   = schedule.querySelector( '.de-fe-venue-nav' );
@@ -594,43 +765,6 @@
 				apply();
 			} );
 		}
-
-		/* Print handler — when the user prints the page, we temporarily clear
-		 * the filter so the printed PDF shows the whole event (printed program
-		 * is a reference document, not a filtered slice). State is restored
-		 * after print so the on-screen UI is unchanged. */
-		let savedFilter = null;
-		window.addEventListener( 'beforeprint', function () {
-			savedFilter = {
-				primary:  currentPrimary,
-				sub:      currentSub,
-				type:     currentTypeId,
-				speaker:  currentSpeakerId,
-				search:   currentSearch,
-				input:    searchEl   ? searchEl.value   : '',
-				selValue: speakerSel ? speakerSel.value : '',
-			};
-			currentPrimary   = '';
-			currentSub       = '';
-			currentTypeId    = '';
-			currentSpeakerId = '';
-			currentSearch    = '';
-			if ( searchEl )   searchEl.value   = '';
-			if ( speakerSel ) speakerSel.value = '';
-			apply();
-		} );
-		window.addEventListener( 'afterprint', function () {
-			if ( ! savedFilter ) return;
-			currentPrimary   = savedFilter.primary;
-			currentSub       = savedFilter.sub;
-			currentTypeId    = savedFilter.type;
-			currentSpeakerId = savedFilter.speaker;
-			currentSearch    = savedFilter.search;
-			if ( searchEl )   searchEl.value   = savedFilter.input;
-			if ( speakerSel ) speakerSel.value = savedFilter.selValue;
-			apply();
-			savedFilter = null;
-		} );
 
 		// Default state: no filter.
 		apply();

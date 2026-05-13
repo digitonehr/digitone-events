@@ -182,6 +182,14 @@ $slot_minutes = 30;
 				</svg>
 				<?php esc_html_e( 'Add to calendar', 'digitone-events' ); ?>
 			</a>
+			<button type="button" class="de-fe-export-pdf" data-de-export-pdf>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+					<polyline points="7 10 12 15 17 10"></polyline>
+					<line x1="12" y1="15" x2="12" y2="3"></line>
+				</svg>
+				<?php esc_html_e( 'Export to PDF', 'digitone-events' ); ?>
+			</button>
 		</div>
 	</header>
 
@@ -527,6 +535,130 @@ $slot_minutes = 30;
 							</li>
 						<?php endforeach; ?>
 					</ul>
+
+					<?php
+					/* ============================================================
+					 * PRINT-ONLY TABLE (v0.8.2)
+					 * Hidden on screen; visible only inside @media print.
+					 * <thead> auto-repeats on every printed page; <td> with
+					 * break-inside: avoid keeps sessions intact across breaks.
+					 * Renders ALL sessions for the day regardless of UI filter.
+					 * ============================================================ */
+					$pt_session_starts = []; // slot_idx => [hid => ['session'=>…,'span'=>N]]
+					$pt_session_blocks = []; // slot_idx => [hid => true]  (continuation)
+					$pt_break_at       = []; // slot_idx => ['session'=>…,'span'=>N]
+					$pt_break_skip     = []; // slot_idx => true (multi-slot break continuation)
+
+					foreach ( $sessions as $pt_s ) {
+						$pt_st = $to_min( $pt_s['start_time'] ?? null );
+						$pt_en = $to_min( $pt_s['end_time']   ?? null );
+						if ( $pt_st === null || $pt_en === null ) continue;
+						$pt_start_slot = (int) ( ( $pt_st - $day_start ) / $slot_minutes );
+						$pt_end_slot   = (int) ( ( $pt_en - $day_start ) / $slot_minutes );
+						if ( $pt_start_slot < 0 || $pt_start_slot >= $total_slots ) continue;
+						$pt_end_slot   = max( $pt_end_slot, $pt_start_slot + 1 );
+						$pt_span       = $pt_end_slot - $pt_start_slot;
+						$pt_is_break   = ! empty( $pt_s['type_name'] ) && strtolower( $pt_s['type_name'] ) === 'break';
+
+						if ( $pt_is_break ) {
+							$pt_break_at[ $pt_start_slot ] = [ 'session' => $pt_s, 'span' => $pt_span ];
+							for ( $pi = $pt_start_slot + 1; $pi < $pt_end_slot && $pi < $total_slots; $pi++ ) {
+								$pt_break_skip[ $pi ] = true;
+							}
+						} else {
+							$pt_hid = $pt_s['sub_venue_id'] ?? '';
+							if ( ! isset( $hall_col[ $pt_hid ] ) ) continue;
+							$pt_session_starts[ $pt_start_slot ][ $pt_hid ] = [ 'session' => $pt_s, 'span' => $pt_span ];
+							for ( $pi = $pt_start_slot + 1; $pi < $pt_end_slot && $pi < $total_slots; $pi++ ) {
+								$pt_session_blocks[ $pi ][ $pt_hid ] = true;
+							}
+						}
+					}
+					?>
+					<table class="de-fe-print-table" aria-hidden="true">
+						<thead>
+							<tr>
+								<th class="de-fe-print-th-time"></th>
+								<?php foreach ( $all_halls_order as $pt_hid ) :
+									$pt_color = $hall_color[ $pt_hid ] ?? '#6b7280';
+								?>
+									<th class="de-fe-print-th-hall" style="background: <?php echo esc_attr( $pt_color ); ?>">
+										<?php echo esc_html( $all_halls[ $pt_hid ] ?? '' ); ?>
+									</th>
+								<?php endforeach; ?>
+							</tr>
+						</thead>
+						<tbody>
+						<?php for ( $slot = 0; $slot < $total_slots; $slot++ ) :
+							if ( isset( $pt_break_skip[ $slot ] ) ) continue;
+							$slot_min   = $day_start + $slot * $slot_minutes;
+							$slot_label = sprintf( '%02d:%02d', (int) ( $slot_min / 60 ), $slot_min % 60 );
+							$is_hour    = ( $slot_min % 60 === 0 );
+						?>
+							<tr class="de-fe-print-tr<?php echo $is_hour ? ' is-hour' : ''; ?>">
+								<td class="de-fe-print-td-time"><?php echo $is_hour ? esc_html( $slot_label ) : ''; ?></td>
+								<?php if ( isset( $pt_break_at[ $slot ] ) ) :
+									$brk         = $pt_break_at[ $slot ]['session'];
+									$brk_started = false;
+									foreach ( $all_halls_order as $pt_hid ) :
+										if ( isset( $pt_session_blocks[ $slot ][ $pt_hid ] ) ) continue;
+									?>
+										<td class="de-fe-print-td-break">
+											<?php if ( ! $brk_started ) :
+												$bst = DigitOne_Events_Helpers_Format::time_display( $brk['start_time'] ?? '' );
+												$ben = DigitOne_Events_Helpers_Format::time_display( $brk['end_time']   ?? '' );
+											?>
+												<span class="de-fe-print-break-content">
+													<?php if ( ! empty( $brk['type_icon'] ) ) : ?>
+														<span class="de-fe-print-break-icon"><?php echo esc_html( $brk['type_icon'] ); ?></span>
+													<?php endif; ?>
+													<strong class="de-fe-print-break-title"><?php echo esc_html( $brk['title'] ?? 'Break' ); ?></strong>
+													<span class="de-fe-print-break-time"><?php echo esc_html( $bst ); ?> – <?php echo esc_html( $ben ); ?></span>
+												</span>
+												<?php $brk_started = true; ?>
+											<?php endif; ?>
+										</td>
+									<?php endforeach; ?>
+								<?php else :
+									foreach ( $all_halls_order as $pt_hid ) :
+										if ( isset( $pt_session_blocks[ $slot ][ $pt_hid ] ) ) continue;
+										if ( isset( $pt_session_starts[ $slot ][ $pt_hid ] ) ) :
+											$entry      = $pt_session_starts[ $slot ][ $pt_hid ];
+											$sess       = $entry['session'];
+											$span       = $entry['span'];
+											$type_color = $sess['type_color'] ?? '#6b7280';
+											$sst        = DigitOne_Events_Helpers_Format::time_display( $sess['start_time'] ?? '' );
+											$sen        = DigitOne_Events_Helpers_Format::time_display( $sess['end_time']   ?? '' );
+										?>
+											<td class="de-fe-print-td-session" rowspan="<?php echo (int) $span; ?>"
+												style="--type-color: <?php echo esc_attr( $type_color ); ?>">
+												<?php if ( ! empty( $sess['type_name'] ) ) : ?>
+													<div class="de-fe-print-session-type">
+														<?php echo esc_html( trim( ( $sess['type_icon'] ?? '' ) . ' ' . $sess['type_name'] ) ); ?>
+													</div>
+												<?php endif; ?>
+												<div class="de-fe-print-session-title"><?php echo esc_html( $sess['title'] ?? '' ); ?></div>
+												<div class="de-fe-print-session-time"><?php echo esc_html( $sst ); ?> – <?php echo esc_html( $sen ); ?></div>
+												<?php
+												$names = [];
+												foreach ( (array) ( $sess['speakers'] ?? [] ) as $sp ) {
+													$nm = trim( ( $sp['first_name'] ?? '' ) . ' ' . ( $sp['last_name'] ?? '' ) );
+													if ( $nm !== '' ) $names[] = $nm;
+												}
+												if ( $names ) :
+												?>
+													<div class="de-fe-print-session-speakers"><?php echo esc_html( implode( ' · ', $names ) ); ?></div>
+												<?php endif; ?>
+											</td>
+										<?php else : ?>
+											<td class="de-fe-print-td-empty"></td>
+										<?php endif;
+									endforeach;
+								endif; ?>
+							</tr>
+						<?php endfor; ?>
+						</tbody>
+					</table>
 
 				<?php endif; ?>
 			</section>

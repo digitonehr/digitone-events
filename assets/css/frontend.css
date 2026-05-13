@@ -1727,3 +1727,324 @@ body.de-fe-modal-open {
 		content: none !important;
 	}
 }
+
+/* ============================================================ */
+/* EXPORT TO PDF BUTTON (v0.8.2)                                */
+/* ============================================================ */
+.de-fe-export-pdf {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 14px;
+	background: var(--defe-bg);
+	border: 1px solid var(--defe-border);
+	border-radius: var(--defe-radius);
+	color: var(--defe-text);
+	font-size: 13px;
+	font-weight: 500;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+.de-fe-export-pdf:hover {
+	background: var(--defe-bg-soft);
+	border-color: var(--defe-text-soft);
+}
+.de-fe-export-pdf svg {
+	flex-shrink: 0;
+}
+.de-fe-export-pdf:disabled {
+	opacity: 0.7;
+	cursor: progress;
+}
+.de-fe-spinner {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: de-fe-spin 0.6s linear infinite;
+	vertical-align: middle;
+	flex-shrink: 0;
+}
+@keyframes de-fe-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* ============================================================ */
+/* PRINT TABLE (v0.8.2) — hidden on screen, visible only on print */
+/* ============================================================ */
+.de-fe-print-table {
+	display: none;
+}
+
+/* ============================================================ */
+/* PRINT STYLESHEET (v0.8.2) — uses CSS table for clean paging   */
+/* <thead> auto-repeats on every page; <td>s avoid mid-page split */
+/* ============================================================ */
+@media print {
+
+	*,
+	*::before,
+	*::after {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	@page {
+		size: A4 landscape;
+		margin: 8mm 8mm 10mm 8mm;
+	}
+
+	body {
+		font-family: var(--defe-font, "Inter", -apple-system, system-ui, sans-serif);
+		color: #1a1a1a;
+		background: #fff;
+		font-size: 9pt;
+	}
+
+	/* Hide all on-screen layouts and UI chrome */
+	.digitone-events-schedule .de-fe-schedule-grid,
+	.digitone-events-schedule .de-fe-mobile-list,
+	.digitone-events-schedule .de-fe-header-actions,
+	.digitone-events-schedule .de-fe-day-nav,
+	.digitone-events-schedule .de-fe-filters,
+	.digitone-events-schedule .de-fe-session-modal,
+	#wpadminbar,
+	html.wp-toolbar {
+		display: none !important;
+	}
+	html.wp-toolbar {
+		margin-top: 0 !important;
+		padding-top: 0 !important;
+	}
+
+	/* Wrapper — break out of theme constraints */
+	.digitone-events-frontend,
+	.digitone-events-schedule {
+		display: block !important;
+		background: #fff !important;
+		padding: 0 !important;
+		max-width: none !important;
+		margin: 0 !important;
+		box-shadow: none !important;
+	}
+
+	/* Event header */
+	.digitone-events-schedule .de-fe-header {
+		margin: 0 0 4mm !important;
+		padding: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-title {
+		font-size: 14pt !important;
+		font-weight: 800 !important;
+		margin: 0 !important;
+		color: #0f172a !important;
+	}
+	.digitone-events-schedule .de-fe-dates {
+		font-size: 9pt !important;
+		color: #475569 !important;
+		margin-top: 0.5mm !important;
+	}
+	.digitone-events-schedule .de-fe-description {
+		font-size: 8pt !important;
+		color: #475569 !important;
+		margin-top: 1mm !important;
+		line-height: 1.35;
+	}
+
+	/* All days visible; new page per day except first */
+	.digitone-events-schedule .de-fe-schedule-day {
+		display: block !important;
+		page-break-before: always;
+		margin: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-schedule-day:first-of-type {
+		page-break-before: avoid;
+	}
+
+	/* Day header */
+	.digitone-events-schedule .de-fe-day-header {
+		background: #0f172a !important;
+		color: #fff !important;
+		padding: 2.5mm 4mm !important;
+		margin: 0 0 2mm !important;
+		border-radius: 1mm !important;
+		page-break-after: avoid !important;
+		page-break-inside: avoid !important;
+		display: flex !important;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 4mm;
+	}
+	.digitone-events-schedule .de-fe-day-header * {
+		color: #fff !important;
+	}
+	.digitone-events-schedule .de-fe-day-header-num {
+		font-size: 9pt !important;
+		opacity: 0.75;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+	.digitone-events-schedule .de-fe-day-header-date {
+		font-size: 13pt !important;
+		font-weight: 700 !important;
+	}
+	.digitone-events-schedule .de-fe-day-header-extra {
+		font-size: 10pt !important;
+		opacity: 0.85;
+	}
+
+	/* === THE PRINT TABLE === */
+	.digitone-events-schedule .de-fe-print-table {
+		display: table !important;
+		width: 100% !important;
+		border-collapse: collapse !important;
+		table-layout: fixed !important;
+		page-break-inside: auto;
+	}
+	/* thead repeats on every page break automatically */
+	.de-fe-print-table thead {
+		display: table-header-group !important;
+	}
+	.de-fe-print-table tbody {
+		display: table-row-group !important;
+	}
+
+	/* Header cells */
+	.de-fe-print-th-time {
+		background: #f3f4f6 !important;
+		width: 14mm !important;
+		border: 1px solid #d1d5db !important;
+	}
+	.de-fe-print-th-hall {
+		color: #fff !important;
+		padding: 2mm 1mm !important;
+		font-size: 9pt !important;
+		font-weight: 700 !important;
+		text-align: center !important;
+		border: 1px solid rgba(255,255,255,0.3) !important;
+		text-shadow: 0 0.5pt 1pt rgba(0,0,0,0.15) !important;
+		letter-spacing: 0.02em;
+	}
+
+	/* Time column */
+	.de-fe-print-td-time {
+		width: 14mm !important;
+		font-size: 7.5pt !important;
+		font-weight: 600 !important;
+		color: #475569 !important;
+		text-align: right !important;
+		padding: 1mm 1.5mm !important;
+		background: #f9fafb !important;
+		border: 1px solid #e5e7eb !important;
+		vertical-align: top !important;
+		font-variant-numeric: tabular-nums;
+	}
+	.de-fe-print-tr.is-hour .de-fe-print-td-time {
+		font-weight: 700 !important;
+		color: #1f2937 !important;
+	}
+
+	/* Session cells */
+	.de-fe-print-td-session {
+		padding: 1.5mm 1.8mm !important;
+		background: #fff !important;
+		border: 1px solid #e5e7eb !important;
+		border-left: 2.5pt solid var(--type-color, #6b7280) !important;
+		vertical-align: top !important;
+		break-inside: avoid !important;
+		page-break-inside: avoid !important;
+		overflow: hidden;
+	}
+	.de-fe-print-session-type {
+		font-size: 6pt !important;
+		font-weight: 700 !important;
+		color: var(--type-color, #444) !important;
+		letter-spacing: 0.04em !important;
+		text-transform: uppercase !important;
+		margin: 0 0 0.5mm !important;
+	}
+	.de-fe-print-session-title {
+		font-size: 8pt !important;
+		font-weight: 700 !important;
+		color: #0f172a !important;
+		line-height: 1.2 !important;
+		margin: 0 0 0.5mm !important;
+	}
+	.de-fe-print-session-time {
+		font-size: 6.5pt !important;
+		color: #6b7280 !important;
+		font-variant-numeric: tabular-nums;
+		margin: 0 0 0.5mm !important;
+	}
+	.de-fe-print-session-speakers {
+		font-size: 6.5pt !important;
+		color: #1f2937 !important;
+		line-height: 1.25 !important;
+		margin: 0 !important;
+	}
+
+	/* Break cells — amber ribbon */
+	.de-fe-print-td-break {
+		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+		border: 1px solid #fbbf24 !important;
+		padding: 1.5mm 2mm !important;
+		font-size: 8pt !important;
+		color: #78350f !important;
+		font-weight: 600 !important;
+		vertical-align: middle !important;
+		text-align: center !important;
+		break-inside: avoid !important;
+		page-break-inside: avoid !important;
+	}
+	.de-fe-print-break-content {
+		display: inline-flex !important;
+		align-items: center;
+		gap: 6pt;
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+	.de-fe-print-break-icon {
+		font-size: 9pt;
+	}
+	.de-fe-print-break-title {
+		font-weight: 700 !important;
+		color: #78350f !important;
+	}
+	.de-fe-print-break-time {
+		font-size: 7pt !important;
+		color: #92400e !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Empty cells */
+	.de-fe-print-td-empty {
+		background: #fff !important;
+		border: 1px solid #f3f4f6 !important;
+		padding: 1mm !important;
+	}
+
+	/* Row-level paging hint */
+	.de-fe-print-table tr {
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
+
+	/* Strip decorative effects */
+	.digitone-events-schedule *,
+	.digitone-events-schedule *::before,
+	.digitone-events-schedule *::after {
+		box-shadow: none !important;
+		animation: none !important;
+		transition: none !important;
+	}
+	.digitone-events-schedule a {
+		color: inherit !important;
+		text-decoration: none !important;
+	}
+	.digitone-events-schedule a::after {
+		content: none !important;
+	}
+}
