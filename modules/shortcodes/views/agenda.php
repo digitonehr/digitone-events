@@ -206,7 +206,7 @@ $slot_minutes = 30;
 						<div class="de-fe-grid-corner" style="grid-row: 1; grid-column: 1"></div>
 
 						<?php foreach ( $all_halls_order as $hid ) : ?>
-							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>; --hall-color: <?php echo esc_attr( $hall_color[ $hid ] ); ?>">
+							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" data-original-grid-column="<?php echo (int) $hall_col[ $hid ]; ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>; --hall-color: <?php echo esc_attr( $hall_color[ $hid ] ); ?>">
 								<?php echo esc_html( $all_halls[ $hid ] ); ?>
 							</div>
 						<?php endforeach; ?>
@@ -258,6 +258,8 @@ $slot_minutes = 30;
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
 								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
 								data-original-grid-column="<?php echo esc_attr( $orig_grid_col ); ?>"
+								data-start-minutes="<?php echo (int) $st; ?>"
+								data-end-minutes="<?php echo (int) $en; ?>"
 								<?php if ( ! $is_break ) : ?>tabindex="0" role="button"<?php endif; ?>>
 								<?php if ( $type_label ) : ?>
 									<div class="de-fe-block-type"><?php echo esc_html( $type_label ); ?></div>
@@ -309,9 +311,15 @@ $slot_minutes = 30;
 							$is_break_mi = ! empty( $s['type_name'] ) && strtolower( $s['type_name'] ) === 'break';
 							$speakers_mi = $s['speakers'] ?? [];
 						?>
+							<?php
+							$st_mi = $to_min( $s['start_time'] ?? null );
+							$en_mi = $to_min( $s['end_time']   ?? null );
+							?>
 							<li class="de-fe-mobile-item<?php echo $is_break_mi ? ' is-break' : ''; ?>"
 								style="--type-color: <?php echo esc_attr( $type_clr ); ?>; --hall-color: <?php echo esc_attr( $hall_clr ); ?>"
 								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
+								data-start-minutes="<?php echo (int) $st_mi; ?>"
+								data-end-minutes="<?php echo (int) $en_mi; ?>"
 								<?php if ( ! $is_break_mi ) : ?>
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
 								tabindex="0"

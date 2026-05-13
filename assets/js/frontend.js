@@ -247,30 +247,56 @@
 				const headers = grid.querySelectorAll( '.de-fe-grid-hall' );
 
 				if ( ! venueId ) {
-					// Restore everything.
+					// Restore everything: clear grid override, restore each block AND each header to its original grid-column.
 					grid.style.gridTemplateColumns = '';
 					grid.classList.remove( 'is-venue-filtered' );
 					blocks.forEach( function ( b ) {
 						b.classList.remove( 'is-filtered-out' );
 						const orig = b.getAttribute( 'data-original-grid-column' );
-						if ( orig ) {
-							// Reapply the original grid-column from inline style (the style attribute already has it)
-							b.style.gridColumn = orig;
-						}
+						if ( orig ) b.style.gridColumn = orig;
 					} );
-					headers.forEach( function ( h ) { h.classList.remove( 'is-filtered-out' ); } );
+					headers.forEach( function ( h ) {
+						h.classList.remove( 'is-filtered-out' );
+						const orig = h.getAttribute( 'data-original-grid-column' );
+						if ( orig ) h.style.gridColumn = orig;
+					} );
 					return;
 				}
 
-				// Filtered: shrink grid to a single hall column.
+				// FILTER MODE.
+				// First compute the active time range for the selected venue from
+				// its non-break blocks. Breaks are then shown only when they
+				// overlap with that range — no jutarnji Coffee Break appearing
+				// in Hall B which doesn't open until 13:00.
+				let venueStart = null, venueEnd = null;
+				blocks.forEach( function ( b ) {
+					if ( b.classList.contains( 'is-break' ) ) return;
+					if ( b.getAttribute( 'data-sub-venue-id' ) !== venueId ) return;
+					const s = parseInt( b.getAttribute( 'data-start-minutes' ), 10 );
+					const e = parseInt( b.getAttribute( 'data-end-minutes' ),   10 );
+					if ( isNaN( s ) || isNaN( e ) ) return;
+					venueStart = ( venueStart === null ) ? s : Math.min( venueStart, s );
+					venueEnd   = ( venueEnd   === null ) ? e : Math.max( venueEnd,   e );
+				} );
+
 				grid.classList.add( 'is-venue-filtered' );
 				grid.style.gridTemplateColumns = '70px minmax(200px, 1fr)';
 
 				blocks.forEach( function ( b ) {
 					const isBreak = b.classList.contains( 'is-break' );
 					if ( isBreak ) {
-						b.classList.remove( 'is-filtered-out' );
-						b.style.gridColumn = '2 / -1';
+						// Show break only if it overlaps with the venue's active range.
+						const s = parseInt( b.getAttribute( 'data-start-minutes' ), 10 );
+						const e = parseInt( b.getAttribute( 'data-end-minutes' ),   10 );
+						const inRange = venueStart !== null && venueEnd !== null
+							&& ! isNaN( s ) && ! isNaN( e )
+							&& s < venueEnd && e > venueStart;
+						if ( inRange ) {
+							b.classList.remove( 'is-filtered-out' );
+							b.style.gridColumn = '2 / -1';
+						} else {
+							b.classList.add( 'is-filtered-out' );
+						}
 					} else if ( b.getAttribute( 'data-sub-venue-id' ) === venueId ) {
 						b.classList.remove( 'is-filtered-out' );
 						b.style.gridColumn = '2';
@@ -288,11 +314,38 @@
 				} );
 			} );
 
-			// Mobile list: simple show/hide.
+			// Mobile list: same break-in-range rule.
 			lists.forEach( function ( list ) {
-				list.querySelectorAll( '.de-fe-mobile-item' ).forEach( function ( item ) {
+				const items = list.querySelectorAll( '.de-fe-mobile-item' );
+
+				// Compute venue time range from matching non-break items.
+				let venueStart = null, venueEnd = null;
+				if ( venueId ) {
+					items.forEach( function ( item ) {
+						if ( item.classList.contains( 'is-break' ) ) return;
+						if ( item.getAttribute( 'data-sub-venue-id' ) !== venueId ) return;
+						const s = parseInt( item.getAttribute( 'data-start-minutes' ), 10 );
+						const e = parseInt( item.getAttribute( 'data-end-minutes' ),   10 );
+						if ( isNaN( s ) || isNaN( e ) ) return;
+						venueStart = ( venueStart === null ) ? s : Math.min( venueStart, s );
+						venueEnd   = ( venueEnd   === null ) ? e : Math.max( venueEnd,   e );
+					} );
+				}
+
+				items.forEach( function ( item ) {
 					const isBreak = item.classList.contains( 'is-break' );
-					if ( isBreak || ! venueId || item.getAttribute( 'data-sub-venue-id' ) === venueId ) {
+					if ( ! venueId ) {
+						item.classList.remove( 'is-filtered-out' );
+						return;
+					}
+					if ( isBreak ) {
+						const s = parseInt( item.getAttribute( 'data-start-minutes' ), 10 );
+						const e = parseInt( item.getAttribute( 'data-end-minutes' ),   10 );
+						const inRange = venueStart !== null && venueEnd !== null
+							&& ! isNaN( s ) && ! isNaN( e )
+							&& s < venueEnd && e > venueStart;
+						item.classList.toggle( 'is-filtered-out', ! inRange );
+					} else if ( item.getAttribute( 'data-sub-venue-id' ) === venueId ) {
 						item.classList.remove( 'is-filtered-out' );
 					} else {
 						item.classList.add( 'is-filtered-out' );

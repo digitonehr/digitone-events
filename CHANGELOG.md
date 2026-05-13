@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-05-13
+
+### Fixed
+- **Desktop hall headers reappear correctly after clearing a venue filter.** Previously, applying a filter set the matching hall header to `style.grid-column: 2` inline, but clearing the filter only removed the hidden class — the override stayed and the header was stuck at column 2, overlapping Hall A so it looked like Hall A and Hall B had vanished. Hall headers now carry `data-original-grid-column` (same pattern as session blocks), and the restore path reapplies that value.
+- **Breaks before a venue's first session are no longer shown when filtering.** Example: Hall A starts at 09:00 but Hall B has nothing until 13:00. Filtering on Hall B used to still show the 10:30 Coffee Break and the 12:00 Lunch Break, even though Hall B wasn't open yet. The JS filter now computes the venue's active time range from its non-break sessions and only shows break sessions that overlap that range — applied to both the desktop grid and the mobile list.
+
+### Changed
+- **Break ribbon is now warm amber** (light cream → amber gradient with dark amber text) instead of gray. Reads as "coffee / lunch time" at a glance and pops against the colourful hall blocks without competing with them. Applied to both the desktop grid ribbon and the mobile break tile.
+
+### How the time-range break filter works
+Each block in the rendered HTML now carries `data-start-minutes` and `data-end-minutes` (minutes-since-midnight integers). When a venue filter is applied, the JS scans the venue's non-break blocks to find the earliest start and latest end, then shows break blocks only when they overlap that window (`break.start < venue.lastEnd && break.end > venue.firstStart`). Clearing the filter restores everything.
+
 ## [0.7.3] - 2026-05-13
 
 ### Fixed
@@ -41,6 +53,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.4] - 2026-05-13
+
+### Fixed
+- **Desktop hall headers reappear correctly after clearing a venue filter.** Previously, applying a filter set the matching hall header to `style.grid-column: 2` inline, but clearing the filter only removed the hidden class — the override stayed and the header was stuck at column 2, overlapping Hall A so it looked like Hall A and Hall B had vanished. Hall headers now carry `data-original-grid-column` (same pattern as session blocks), and the restore path reapplies that value.
+- **Breaks before a venue's first session are no longer shown when filtering.** Example: Hall A starts at 09:00 but Hall B has nothing until 13:00. Filtering on Hall B used to still show the 10:30 Coffee Break and the 12:00 Lunch Break, even though Hall B wasn't open yet. The JS filter now computes the venue's active time range from its non-break sessions and only shows break sessions that overlap that range — applied to both the desktop grid and the mobile list.
+
+### Changed
+- **Break ribbon is now warm amber** (light cream → amber gradient with dark amber text) instead of gray. Reads as "coffee / lunch time" at a glance and pops against the colourful hall blocks without competing with them. Applied to both the desktop grid ribbon and the mobile break tile.
+
+### How the time-range break filter works
+Each block in the rendered HTML now carries `data-start-minutes` and `data-end-minutes` (minutes-since-midnight integers). When a venue filter is applied, the JS scans the venue's non-break blocks to find the earliest start and latest end, then shows break blocks only when they overlap that window (`break.start < venue.lastEnd && break.end > venue.firstStart`). Clearing the filter restores everything.
 
 ## [0.7.3] - 2026-05-13
 
