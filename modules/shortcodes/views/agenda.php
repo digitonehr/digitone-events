@@ -62,21 +62,50 @@ foreach ( $all_halls_order as $i => $hid ) {
 	$hall_color[ $hid ] = $hall_palette[ $i % count( $hall_palette ) ];
 }
 
-// Build venue-picker options: combine primary venue + sub-venue per unique sub-venue.
-$venue_options       = []; // sub_venue_id => "Primary Venue — Sub Venue Name"
-$venue_options_order = []; // ordered by sub_venue_name asc, then primary venue
+// Collect unique primary venues (venue_id => venue_name).
+$primary_venues = [];
+foreach ( $sessions_by_day as $day_sessions ) {
+	foreach ( $day_sessions as $s ) {
+		$vid = $s['venue_id'] ?? '';
+		if ( ! $vid || isset( $primary_venues[ $vid ] ) ) continue;
+		$primary_venues[ $vid ] = $s['venue_name'] ?? '';
+	}
+}
+asort( $primary_venues );
+$multi_primary = count( $primary_venues ) > 1;
+
+// Build venue-picker options. Single primary: label = sub-venue name only.
+// Multi primary: label = "Primary Venue — Sub Venue Name" + group metadata.
+$venue_options       = []; // sub_venue_id => [ 'label' => ..., 'primary_id' => ..., 'color' => ..., 'name' => ... ]
+$venue_options_order = []; // ordered list for stable iteration
 foreach ( $sessions_by_day as $day_sessions ) {
 	foreach ( $day_sessions as $s ) {
 		$sub_id = $s['sub_venue_id'] ?? '';
 		if ( ! $sub_id || isset( $venue_options[ $sub_id ] ) ) continue;
-		$label = '';
-		if ( ! empty( $s['venue_name'] ) )     $label .= $s['venue_name'];
-		if ( ! empty( $s['sub_venue_name'] ) ) $label .= ( $label !== '' ? ' — ' : '' ) . $s['sub_venue_name'];
-		$venue_options[ $sub_id ] = $label;
-		$venue_options_order[]    = [ 'id' => $sub_id, 'sort' => strtolower( (string) ( $s['sub_venue_name'] ?? $label ) ) ];
+		$sub_name = $s['sub_venue_name'] ?? '';
+		if ( $multi_primary ) {
+			$label = trim( ( $s['venue_name'] ?? '' ) . ( $sub_name ? ' — ' . $sub_name : '' ) );
+		} else {
+			$label = $sub_name ?: ( $s['venue_name'] ?? '' );
+		}
+		$venue_options[ $sub_id ] = [
+			'label'      => $label,
+			'primary_id' => $s['venue_id'] ?? '',
+			'color'      => $hall_color[ $sub_id ] ?? '#6b7280',
+			'name'       => $sub_name,
+		];
+		$venue_options_order[] = [
+			'id'          => $sub_id,
+			'primary_id'  => $s['venue_id'] ?? '',
+			'primary_name'=> strtolower( $s['venue_name'] ?? '' ),
+			'sub_name'    => strtolower( $sub_name ),
+		];
 	}
 }
-usort( $venue_options_order, function ( $a, $b ) { return strcmp( $a['sort'], $b['sort'] ); } );
+usort( $venue_options_order, function ( $a, $b ) {
+	if ( $a['primary_name'] !== $b['primary_name'] ) return strcmp( $a['primary_name'], $b['primary_name'] );
+	return strcmp( $a['sub_name'], $b['sub_name'] );
+} );
 
 // Initial active day defaults to first day. Browser-side JS will switch to
 // "today" if today's local date matches one of the event days. Doing this in JS
@@ -137,16 +166,33 @@ $slot_minutes = 30;
 		</nav>
 
 		<?php if ( ! empty( $venue_options ) ) : ?>
-			<nav class="de-fe-venue-nav" aria-label="<?php esc_attr_e( 'Filter by venue', 'digitone-events' ); ?>">
-				<button type="button" class="de-fe-venue-nav-item is-active" data-venue="">
-					<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
-				</button>
+			<?php if ( $multi_primary ) : ?>
+				<nav class="de-fe-primary-nav" aria-label="<?php esc_attr_e( 'Filter by venue', 'digitone-events' ); ?>">
+					<button type="button" class="de-fe-primary-nav-item is-active" data-primary="">
+						<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
+					</button>
+					<?php foreach ( $primary_venues as $pid => $pname ) : ?>
+						<button type="button" class="de-fe-primary-nav-item" data-primary="<?php echo esc_attr( $pid ); ?>">
+							<?php echo esc_html( $pname ); ?>
+						</button>
+					<?php endforeach; ?>
+				</nav>
+			<?php endif; ?>
+			<nav class="de-fe-venue-nav" aria-label="<?php echo $multi_primary ? esc_attr__( 'Filter by hall', 'digitone-events' ) : esc_attr__( 'Filter by venue', 'digitone-events' ); ?>">
+				<?php if ( ! $multi_primary ) : ?>
+					<button type="button" class="de-fe-venue-nav-item is-active" data-venue="">
+						<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
+					</button>
+				<?php endif; ?>
 				<?php foreach ( $venue_options_order as $vo ) :
 					$sub_id = $vo['id'];
-					$label  = $venue_options[ $sub_id ];
+					$opt    = $venue_options[ $sub_id ];
 				?>
-					<button type="button" class="de-fe-venue-nav-item" data-venue="<?php echo esc_attr( $sub_id ); ?>">
-						<?php echo esc_html( $label ); ?>
+					<button type="button" class="de-fe-venue-nav-item"
+						data-venue="<?php echo esc_attr( $sub_id ); ?>"
+						data-primary="<?php echo esc_attr( $opt['primary_id'] ); ?>"
+						style="--hall-color: <?php echo esc_attr( $opt['color'] ); ?>">
+						<?php echo esc_html( $opt['label'] ); ?>
 					</button>
 				<?php endforeach; ?>
 			</nav>
@@ -257,6 +303,7 @@ $slot_minutes = 30;
 								style="<?php echo $style; ?>"
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
 								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
+								data-venue-id="<?php echo esc_attr( $s['venue_id'] ?? '' ); ?>"
 								data-original-grid-column="<?php echo esc_attr( $orig_grid_col ); ?>"
 								data-start-minutes="<?php echo (int) $st; ?>"
 								data-end-minutes="<?php echo (int) $en; ?>"
@@ -318,6 +365,7 @@ $slot_minutes = 30;
 							<li class="de-fe-mobile-item<?php echo $is_break_mi ? ' is-break' : ''; ?>"
 								style="--type-color: <?php echo esc_attr( $type_clr ); ?>; --hall-color: <?php echo esc_attr( $hall_clr ); ?>"
 								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
+								data-venue-id="<?php echo esc_attr( $s['venue_id'] ?? '' ); ?>"
 								data-start-minutes="<?php echo (int) $st_mi; ?>"
 								data-end-minutes="<?php echo (int) $en_mi; ?>"
 								<?php if ( ! $is_break_mi ) : ?>

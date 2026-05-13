@@ -931,8 +931,48 @@ body.de-fe-modal-open {
 	background: var(--defe-bg);
 }
 .de-fe-venue-nav-item.is-active {
-	background: var(--defe-primary);
-	border-color: var(--defe-primary);
+	background: var(--hall-color, var(--defe-primary));
+	border-color: var(--hall-color, var(--defe-primary));
+	color: #fff;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.de-fe-venue-nav-item.is-hidden-by-primary {
+	display: none !important;
+}
+
+/* Primary picker (only rendered when 2+ primary venues exist) */
+.de-fe-primary-nav {
+	display: flex !important;
+	gap: 6px;
+	margin: 0 0 12px;
+	overflow-x: auto;
+	padding: 0 0 4px;
+	-webkit-overflow-scrolling: touch;
+	flex-wrap: wrap;
+}
+.de-fe-primary-nav-item {
+	display: inline-flex !important;
+	align-items: center;
+	padding: 7px 16px;
+	background: var(--defe-bg-alt);
+	border: 1px solid var(--defe-border);
+	border-radius: 9999px;
+	color: var(--defe-text-soft);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: all 0.15s ease;
+	font-family: inherit;
+}
+.de-fe-primary-nav-item:hover {
+	color: var(--defe-text);
+	border-color: var(--defe-text-soft);
+	background: var(--defe-bg);
+}
+.de-fe-primary-nav-item.is-active {
+	background: var(--defe-text);
+	border-color: var(--defe-text);
 	color: #fff;
 }
 

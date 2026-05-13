@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.6] - 2026-05-13
+
+### Changed
+- **Active venue pill now matches the hall's colour.** Each sub-venue pill carries an inline `--hall-color` CSS variable, and the `.is-active` rule reads from it (falling back to the primary blue for the "All venues" pill). So when you select *Hall B*, its pill turns pink (matching the Hall B header colour), *Hall A* turns blue, and so on — keeps the visual binding between picker and grid consistent.
+- **Smart venue labels based on primary-venue count.** When the event has exactly *one* primary venue (the common case — one hotel, several halls), the pills show just the sub-venue name ("Hall A", "Hall B", …) instead of the longer "Sheraton Dubrovnik Riviera Hotel — Hall A". When the event has *two or more* primary venues, the longer "Primary — Sub" format is used so each pill is unambiguous.
+
+### Added
+- **Two-level picker for multi-venue events.** When the event spans 2+ primary venues, a top "Filter by venue" row is rendered above the hall picker. Clicking a primary (e.g. *Hotel A*) filters the schedule to all of that primary's halls; the sub picker is also narrowed to that primary's halls. Clicking a specific hall narrows further. Clicking "All venues" resets both. Single-primary events are unchanged.
+- **Each block now carries `data-venue-id`** (the primary venue) in addition to `data-sub-venue-id`. The JS filter uses this for the new primary-level filter mode, where the grid keeps its multi-column layout but non-matching halls are hidden.
+
+### Internal
+- `setupVenueFilter` was rewritten around an explicit state pair `(currentPrimary, currentSub)`. The `matchesFilter` predicate prefers `sub` over `primary` when both are set, so picking a hall always wins over picking its parent venue. Picking a primary clears any selected sub, so the picker UX stays predictable.
+
 ## [0.7.5] - 2026-05-13
 
 ### Fixed
@@ -62,6 +75,19 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.6] - 2026-05-13
+
+### Changed
+- **Active venue pill now matches the hall's colour.** Each sub-venue pill carries an inline `--hall-color` CSS variable, and the `.is-active` rule reads from it (falling back to the primary blue for the "All venues" pill). So when you select *Hall B*, its pill turns pink (matching the Hall B header colour), *Hall A* turns blue, and so on — keeps the visual binding between picker and grid consistent.
+- **Smart venue labels based on primary-venue count.** When the event has exactly *one* primary venue (the common case — one hotel, several halls), the pills show just the sub-venue name ("Hall A", "Hall B", …) instead of the longer "Sheraton Dubrovnik Riviera Hotel — Hall A". When the event has *two or more* primary venues, the longer "Primary — Sub" format is used so each pill is unambiguous.
+
+### Added
+- **Two-level picker for multi-venue events.** When the event spans 2+ primary venues, a top "Filter by venue" row is rendered above the hall picker. Clicking a primary (e.g. *Hotel A*) filters the schedule to all of that primary's halls; the sub picker is also narrowed to that primary's halls. Clicking a specific hall narrows further. Clicking "All venues" resets both. Single-primary events are unchanged.
+- **Each block now carries `data-venue-id`** (the primary venue) in addition to `data-sub-venue-id`. The JS filter uses this for the new primary-level filter mode, where the grid keeps its multi-column layout but non-matching halls are hidden.
+
+### Internal
+- `setupVenueFilter` was rewritten around an explicit state pair `(currentPrimary, currentSub)`. The `matchesFilter` predicate prefers `sub` over `primary` when both are set, so picking a hall always wins over picking its parent venue. Picking a primary clears any selected sub, so the picker UX stays predictable.
 
 ## [0.7.5] - 2026-05-13
 

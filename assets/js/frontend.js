@@ -224,32 +224,51 @@
 	}
 
 	/* ============================================================
-	 * Venue filter — hides blocks/headers/mobile items that don't match.
-	 * "All venues" (data-venue="") restores the full grid.
-	 * Break-type sessions are shown only when they overlap with the
-	 * selected venue's active time range, and de-duplicated by time slot.
-	 * On mobile, items are also reordered chronologically while filtered.
+	 * Venue filter — supports a two-level picker:
+	 *   - Primary venue picker (rendered only when 2+ primaries exist)
+	 *   - Sub-venue (hall) picker — always rendered
+	 *
+	 * Filter state is the LAST picker clicked:
+	 *   - subId set → filter the schedule to that one sub-venue
+	 *   - primaryId set (without subId) → filter to all sub-venues in that primary
+	 *   - both null → no filter
+	 *
+	 * Breaks are shown only when their time overlaps the active filter's
+	 * time range, and de-duplicated by `(start, end)` so the same break entered
+	 * once per hall doesn't appear multiple times in the filtered view.
 	 * ============================================================ */
 	function setupVenueFilter( schedule ) {
-		const venueNav = schedule.querySelector( '.de-fe-venue-nav' );
+		const primaryNav = schedule.querySelector( '.de-fe-primary-nav' );
+		const venueNav   = schedule.querySelector( '.de-fe-venue-nav' );
 		if ( ! venueNav ) return;
-		const buttons = venueNav.querySelectorAll( '.de-fe-venue-nav-item' );
-		const grids   = schedule.querySelectorAll( '.de-fe-schedule-grid' );
-		const lists   = schedule.querySelectorAll( '.de-fe-mobile-list' );
-		if ( ! buttons.length ) return;
+		const primaryButtons = primaryNav ? primaryNav.querySelectorAll( '.de-fe-primary-nav-item' ) : [];
+		const venueButtons   = venueNav.querySelectorAll( '.de-fe-venue-nav-item' );
+		const grids = schedule.querySelectorAll( '.de-fe-schedule-grid' );
+		const lists = schedule.querySelectorAll( '.de-fe-mobile-list' );
+		if ( ! venueButtons.length ) return;
 
-		// Capture each mobile list's original DOM order so we can restore it
+		// Snapshot each mobile list's original DOM order so we can restore it
 		// after the user clears the filter.
 		const originalOrder = new WeakMap();
 		lists.forEach( function ( list ) {
 			originalOrder.set( list, Array.prototype.slice.call( list.children ) );
 		} );
 
-		function computeVenueRange( items, venueId ) {
+		// State.
+		let currentPrimary = '';
+		let currentSub     = '';
+
+		function matchesFilter( el ) {
+			if ( currentSub )     return el.getAttribute( 'data-sub-venue-id' ) === currentSub;
+			if ( currentPrimary ) return el.getAttribute( 'data-venue-id' )     === currentPrimary;
+			return true;
+		}
+
+		function computeRange( items ) {
 			let venueStart = null, venueEnd = null;
 			items.forEach( function ( item ) {
 				if ( item.classList.contains( 'is-break' ) ) return;
-				if ( item.getAttribute( 'data-sub-venue-id' ) !== venueId ) return;
+				if ( ! matchesFilter( item ) ) return;
 				const s = parseInt( item.getAttribute( 'data-start-minutes' ), 10 );
 				const e = parseInt( item.getAttribute( 'data-end-minutes' ),   10 );
 				if ( isNaN( s ) || isNaN( e ) ) return;
@@ -259,17 +278,44 @@
 			return { venueStart: venueStart, venueEnd: venueEnd };
 		}
 
-		function apply( venueId ) {
-			buttons.forEach( function ( b ) {
-				b.classList.toggle( 'is-active', b.getAttribute( 'data-venue' ) === venueId );
-				b.setAttribute( 'aria-pressed', b.getAttribute( 'data-venue' ) === venueId ? 'true' : 'false' );
+		function activeFilterPresent() {
+			return !! currentSub || !! currentPrimary;
+		}
+
+		function syncButtonsActive() {
+			primaryButtons.forEach( function ( b ) {
+				const isAll  = ! b.getAttribute( 'data-primary' );
+				const isThis = b.getAttribute( 'data-primary' ) === currentPrimary;
+				const active = ( isAll && ! activeFilterPresent() ) || ( ! isAll && isThis );
+				b.classList.toggle( 'is-active', active );
+				b.setAttribute( 'aria-pressed', active ? 'true' : 'false' );
 			} );
+
+			venueButtons.forEach( function ( b ) {
+				const isAll  = ! b.getAttribute( 'data-venue' );
+				const isThis = b.getAttribute( 'data-venue' ) === currentSub;
+				const active = ( isAll && ! activeFilterPresent() ) || ( ! isAll && isThis );
+				b.classList.toggle( 'is-active', active );
+				b.setAttribute( 'aria-pressed', active ? 'true' : 'false' );
+
+				// When a primary is selected, dim/hide sub pills that belong to other primaries.
+				if ( currentPrimary && ! isAll ) {
+					const matchesPrimary = b.getAttribute( 'data-primary' ) === currentPrimary;
+					b.classList.toggle( 'is-hidden-by-primary', ! matchesPrimary );
+				} else {
+					b.classList.remove( 'is-hidden-by-primary' );
+				}
+			} );
+		}
+
+		function apply() {
+			syncButtonsActive();
 
 			grids.forEach( function ( grid ) {
 				const blocks  = grid.querySelectorAll( '.de-fe-block' );
 				const headers = grid.querySelectorAll( '.de-fe-grid-hall' );
 
-				if ( ! venueId ) {
+				if ( ! activeFilterPresent() ) {
 					grid.style.gridTemplateColumns = '';
 					grid.classList.remove( 'is-venue-filtered' );
 					blocks.forEach( function ( b ) {
@@ -285,10 +331,18 @@
 					return;
 				}
 
-				const range = computeVenueRange( blocks, venueId );
+				const range = computeRange( blocks );
 
 				grid.classList.add( 'is-venue-filtered' );
-				grid.style.gridTemplateColumns = '70px minmax(200px, 1fr)';
+
+				// If filtering to a single sub-venue, collapse to one column.
+				// If filtering by primary (which may have multiple subs), keep multi-column layout
+				// but hide non-matching columns.
+				if ( currentSub ) {
+					grid.style.gridTemplateColumns = '70px minmax(200px, 1fr)';
+				} else {
+					grid.style.gridTemplateColumns = '';
+				}
 
 				const seenBreaks = new Set();
 				blocks.forEach( function ( b ) {
@@ -307,26 +361,37 @@
 						} else {
 							b.classList.add( 'is-filtered-out' );
 						}
-					} else if ( b.getAttribute( 'data-sub-venue-id' ) === venueId ) {
+					} else if ( matchesFilter( b ) ) {
 						b.classList.remove( 'is-filtered-out' );
-						b.style.gridColumn = '2';
+						if ( currentSub ) {
+							b.style.gridColumn = '2';
+						} else {
+							// Primary-only filter: restore original column position.
+							const orig = b.getAttribute( 'data-original-grid-column' );
+							if ( orig ) b.style.gridColumn = orig;
+						}
 					} else {
 						b.classList.add( 'is-filtered-out' );
 					}
 				} );
 
 				headers.forEach( function ( h ) {
-					const match = h.getAttribute( 'data-sub-venue-id' ) === venueId;
-					h.classList.toggle( 'is-filtered-out', ! match );
-					if ( match ) h.style.gridColumn = '2';
+					const isMatch = matchesFilter( h );
+					h.classList.toggle( 'is-filtered-out', ! isMatch );
+					if ( isMatch ) {
+						if ( currentSub ) {
+							h.style.gridColumn = '2';
+						} else {
+							const orig = h.getAttribute( 'data-original-grid-column' );
+							if ( orig ) h.style.gridColumn = orig;
+						}
+					}
 				} );
 			} );
 
-			// Mobile list: time-sort when filtered, restore order when cleared,
-			// dedupe break sessions, time-range filter on breaks.
+			// Mobile list: time-sort when filtered, restore order when cleared.
 			lists.forEach( function ( list ) {
-				if ( ! venueId ) {
-					// Restore original DOM order and show everything.
+				if ( ! activeFilterPresent() ) {
 					const orig = originalOrder.get( list );
 					if ( orig ) orig.forEach( function ( item ) { list.appendChild( item ); } );
 					list.querySelectorAll( '.de-fe-mobile-item' ).forEach( function ( item ) {
@@ -335,8 +400,6 @@
 					return;
 				}
 
-				// Filtered: reorder by start_time so breaks fall into their
-				// natural chronological slot among the visible sessions.
 				const items = Array.prototype.slice.call( list.querySelectorAll( '.de-fe-mobile-item' ) );
 				items.sort( function ( a, b ) {
 					const sa = parseInt( a.getAttribute( 'data-start-minutes' ), 10 );
@@ -345,7 +408,7 @@
 				} );
 				items.forEach( function ( item ) { list.appendChild( item ); } );
 
-				const range = computeVenueRange( items, venueId );
+				const range = computeRange( items );
 				const seenBreaks = new Set();
 
 				items.forEach( function ( item ) {
@@ -363,7 +426,7 @@
 						} else {
 							item.classList.add( 'is-filtered-out' );
 						}
-					} else if ( item.getAttribute( 'data-sub-venue-id' ) === venueId ) {
+					} else if ( matchesFilter( item ) ) {
 						item.classList.remove( 'is-filtered-out' );
 					} else {
 						item.classList.add( 'is-filtered-out' );
@@ -372,14 +435,36 @@
 			} );
 		}
 
-		buttons.forEach( function ( btn ) {
+		primaryButtons.forEach( function ( btn ) {
 			btn.addEventListener( 'click', function ( ev ) {
 				ev.preventDefault();
-				apply( btn.getAttribute( 'data-venue' ) || '' );
+				const pid = btn.getAttribute( 'data-primary' ) || '';
+				currentPrimary = pid;
+				// Picking a different primary clears any sub selection.
+				currentSub = '';
+				apply();
 			} );
 		} );
 
-		// Default state: no filter ("All venues" already has is-active in markup).
+		venueButtons.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function ( ev ) {
+				ev.preventDefault();
+				const vid = btn.getAttribute( 'data-venue' ) || '';
+				const pid = btn.getAttribute( 'data-primary' ) || '';
+				if ( ! vid ) {
+					// "All venues" sub pill (only present in single-primary mode) → clear all.
+					currentPrimary = '';
+					currentSub = '';
+				} else {
+					currentSub = vid;
+					currentPrimary = pid; // auto-sync primary highlight to this sub's parent
+				}
+				apply();
+			} );
+		} );
+
+		// Default state: nothing filtered.
+		apply();
 	}
 
 	document.addEventListener( 'DOMContentLoaded', function () {
