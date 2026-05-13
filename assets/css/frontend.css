@@ -226,18 +226,19 @@
 }
 
 .de-fe-grid-hall {
-	background: var(--defe-bg-alt);
-	border-right: 1px solid var(--defe-border);
+	background: var(--hall-color, var(--defe-bg-alt));
+	border-right: 1px solid rgba(255,255,255,0.15);
 	border-bottom: 2px solid var(--defe-border);
 	padding: 12px 14px;
 	font-weight: 700;
 	font-size: 13.5px;
-	color: var(--defe-text);
+	color: #fff;
 	text-align: center;
 	letter-spacing: 0.02em;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 .de-fe-grid-hall:last-child {
 	border-right: 0;
@@ -938,9 +939,8 @@ body.de-fe-modal-open {
 	display: none !important;
 }
 
-/* When filtered, soften the look so it's obviously a subset view */
+/* When filtered, keep the matching hall coloured (its own --hall-color) */
 .de-fe-schedule-grid.is-venue-filtered .de-fe-grid-hall {
-	background: var(--defe-primary);
 	color: #fff;
 }
 

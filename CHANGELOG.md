@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-05-13
+
+### Fixed
+- **Venue picker is back.** In 0.7.2 the venue-filter UI referenced `$venue_options` but the PHP that builds the options array was silently dropped by a bad string-replace patch. The builder is now present (collects unique `sub_venue_id` → "Primary Venue — Sub Venue" labels), and the pills render on both desktop and mobile under the day picker.
+- **Mobile list is now grouped by hall first, then by time within each hall.** Previously the list was sorted strictly by start time across all halls, which made it hard to follow a single track on a phone. Now you see all Hall A sessions chronologically, then all Hall B, etc.
+
+### Changed
+- **Desktop hall headers are now coloured.** Each hall header in the time-grid uses the same `--hall-color` swatch that the mobile pills use (blue for the first hall, pink for the second, teal for the third, etc.). White text on the colour with a subtle text shadow. Visually ties the two views together so you don't have to translate "blue pill on phone" → "third column on laptop".
+
+### Notes
+- Auto-assigned palette of 8 colours cycles after the 8th hall. Override via custom CSS targeting `.de-fe-grid-hall[data-sub-venue-id="..."]` if you want specific hall ↔ colour bindings.
+
 ## [0.7.2] - 2026-05-13
 
 ### Fixed
@@ -29,6 +41,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.3] - 2026-05-13
+
+### Fixed
+- **Venue picker is back.** In 0.7.2 the venue-filter UI referenced `$venue_options` but the PHP that builds the options array was silently dropped by a bad string-replace patch. The builder is now present (collects unique `sub_venue_id` → "Primary Venue — Sub Venue" labels), and the pills render on both desktop and mobile under the day picker.
+- **Mobile list is now grouped by hall first, then by time within each hall.** Previously the list was sorted strictly by start time across all halls, which made it hard to follow a single track on a phone. Now you see all Hall A sessions chronologically, then all Hall B, etc.
+
+### Changed
+- **Desktop hall headers are now coloured.** Each hall header in the time-grid uses the same `--hall-color` swatch that the mobile pills use (blue for the first hall, pink for the second, teal for the third, etc.). White text on the colour with a subtle text shadow. Visually ties the two views together so you don't have to translate "blue pill on phone" → "third column on laptop".
+
+### Notes
+- Auto-assigned palette of 8 colours cycles after the 8th hall. Override via custom CSS targeting `.de-fe-grid-hall[data-sub-venue-id="..."]` if you want specific hall ↔ colour bindings.
 
 ## [0.7.2] - 2026-05-13
 

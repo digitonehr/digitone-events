@@ -62,6 +62,22 @@ foreach ( $all_halls_order as $i => $hid ) {
 	$hall_color[ $hid ] = $hall_palette[ $i % count( $hall_palette ) ];
 }
 
+// Build venue-picker options: combine primary venue + sub-venue per unique sub-venue.
+$venue_options       = []; // sub_venue_id => "Primary Venue — Sub Venue Name"
+$venue_options_order = []; // ordered by sub_venue_name asc, then primary venue
+foreach ( $sessions_by_day as $day_sessions ) {
+	foreach ( $day_sessions as $s ) {
+		$sub_id = $s['sub_venue_id'] ?? '';
+		if ( ! $sub_id || isset( $venue_options[ $sub_id ] ) ) continue;
+		$label = '';
+		if ( ! empty( $s['venue_name'] ) )     $label .= $s['venue_name'];
+		if ( ! empty( $s['sub_venue_name'] ) ) $label .= ( $label !== '' ? ' — ' : '' ) . $s['sub_venue_name'];
+		$venue_options[ $sub_id ] = $label;
+		$venue_options_order[]    = [ 'id' => $sub_id, 'sort' => strtolower( (string) ( $s['sub_venue_name'] ?? $label ) ) ];
+	}
+}
+usort( $venue_options_order, function ( $a, $b ) { return strcmp( $a['sort'], $b['sort'] ); } );
+
 // Initial active day defaults to first day. Browser-side JS will switch to
 // "today" if today's local date matches one of the event days. Doing this in JS
 // (not PHP) avoids server timezone and clock drift issues.
@@ -125,7 +141,10 @@ $slot_minutes = 30;
 				<button type="button" class="de-fe-venue-nav-item is-active" data-venue="">
 					<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
 				</button>
-				<?php foreach ( $venue_options as $sub_id => $label ) : ?>
+				<?php foreach ( $venue_options_order as $vo ) :
+					$sub_id = $vo['id'];
+					$label  = $venue_options[ $sub_id ];
+				?>
 					<button type="button" class="de-fe-venue-nav-item" data-venue="<?php echo esc_attr( $sub_id ); ?>">
 						<?php echo esc_html( $label ); ?>
 					</button>
@@ -187,7 +206,7 @@ $slot_minutes = 30;
 						<div class="de-fe-grid-corner" style="grid-row: 1; grid-column: 1"></div>
 
 						<?php foreach ( $all_halls_order as $hid ) : ?>
-							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>">
+							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>; --hall-color: <?php echo esc_attr( $hall_color[ $hid ] ); ?>">
 								<?php echo esc_html( $all_halls[ $hid ] ); ?>
 							</div>
 						<?php endforeach; ?>
@@ -265,7 +284,19 @@ $slot_minutes = 30;
 					</div>
 
 					<ul class="de-fe-mobile-list">
-						<?php foreach ( $sessions as $s ) :
+						<?php
+						// Mobile list sort: first by sub_venue_name (Hall A → Hall B → ...),
+						// then by start_time within each venue. This is what users intuitively
+						// expect on phones where there's no per-hall column.
+						$mobile_sessions = $sessions;
+						usort( $mobile_sessions, function ( $a, $b ) {
+							$va = strtolower( (string) ( $a['sub_venue_name'] ?? '' ) );
+							$vb = strtolower( (string) ( $b['sub_venue_name'] ?? '' ) );
+							if ( $va !== $vb ) return strcmp( $va, $vb );
+							return strcmp( (string) ( $a['start_time'] ?? '' ), (string) ( $b['start_time'] ?? '' ) );
+						} );
+						?>
+						<?php foreach ( $mobile_sessions as $s ) :
 							$type_label = trim( ( $s['type_icon'] ?? '' ) . ' ' . ( $s['type_name'] ?? '' ) );
 							$time = '';
 							if ( ! empty( $s['start_time'] ) ) {
@@ -280,6 +311,7 @@ $slot_minutes = 30;
 						?>
 							<li class="de-fe-mobile-item<?php echo $is_break_mi ? ' is-break' : ''; ?>"
 								style="--type-color: <?php echo esc_attr( $type_clr ); ?>; --hall-color: <?php echo esc_attr( $hall_clr ); ?>"
+								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
 								<?php if ( ! $is_break_mi ) : ?>
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
 								tabindex="0"
