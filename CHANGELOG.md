@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2026-05-13
+
+### Fixed
+- **Mobile filter order is now correct.** Before, when filtering by Hall B (sessions starting at 13:00), the 15:00 Coffee Break appeared at the *top* of the list — above the 13:00 session. That happened because the PHP default sort is `sub_venue_name → time`, so the break (assigned to "Hall A") was rendered before any Hall B item alphabetically. The JS filter now re-orders the mobile list chronologically by `data-start-minutes` while a filter is active, and restores the original hall-grouped order when the filter is cleared.
+- **Break sessions are de-duplicated by time slot when filtering.** If your data has the same break entered multiple times (e.g. one per hall), the filter view will now show each unique `(start, end)` time-pair *once* per filtered venue rather than rendering it twice. Applied to both the desktop grid and the mobile list.
+
+### How the chronological-while-filtered logic works
+On setup, each mobile list's original DOM order is captured into a `WeakMap`. When the user picks a specific venue, the JS sorts a snapshot of the items by `data-start-minutes` and re-appends them in that order. When "All venues" is clicked, the original snapshot is replayed back into the DOM so the default hall-grouped view returns intact.
+
 ## [0.7.4] - 2026-05-13
 
 ### Fixed
@@ -53,6 +62,15 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.5] - 2026-05-13
+
+### Fixed
+- **Mobile filter order is now correct.** Before, when filtering by Hall B (sessions starting at 13:00), the 15:00 Coffee Break appeared at the *top* of the list — above the 13:00 session. That happened because the PHP default sort is `sub_venue_name → time`, so the break (assigned to "Hall A") was rendered before any Hall B item alphabetically. The JS filter now re-orders the mobile list chronologically by `data-start-minutes` while a filter is active, and restores the original hall-grouped order when the filter is cleared.
+- **Break sessions are de-duplicated by time slot when filtering.** If your data has the same break entered multiple times (e.g. one per hall), the filter view will now show each unique `(start, end)` time-pair *once* per filtered venue rather than rendering it twice. Applied to both the desktop grid and the mobile list.
+
+### How the chronological-while-filtered logic works
+On setup, each mobile list's original DOM order is captured into a `WeakMap`. When the user picks a specific venue, the JS sorts a snapshot of the items by `data-start-minutes` and re-appends them in that order. When "All venues" is clicked, the original snapshot is replayed back into the DOM so the default hall-grouped view returns intact.
 
 ## [0.7.4] - 2026-05-13
 
