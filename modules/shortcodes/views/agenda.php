@@ -44,8 +44,22 @@ usort( $all_halls_order, function ( $a, $b ) use ( $all_halls ) {
 } );
 $hall_count = count( $all_halls_order );
 $hall_col   = [];
+$hall_color = [];
+// Auto-assigned colour palette so each hall has a distinct visual identity on
+// mobile (where we lose the per-hall columns of the desktop grid).
+$hall_palette = [
+	'#2563eb', // blue
+	'#db2777', // pink
+	'#0d9488', // teal
+	'#ea580c', // orange
+	'#7c3aed', // purple
+	'#dc2626', // red
+	'#16a34a', // green
+	'#0284c7', // cyan
+];
 foreach ( $all_halls_order as $i => $hid ) {
-	$hall_col[ $hid ] = $i + 2;
+	$hall_col[ $hid ]   = $i + 2;
+	$hall_color[ $hid ] = $hall_palette[ $i % count( $hall_palette ) ];
 }
 
 // Initial active day defaults to first day. Browser-side JS will switch to
@@ -105,6 +119,19 @@ $slot_minutes = 30;
 				</button>
 			<?php endforeach; ?>
 		</nav>
+
+		<?php if ( ! empty( $venue_options ) ) : ?>
+			<nav class="de-fe-venue-nav" aria-label="<?php esc_attr_e( 'Filter by venue', 'digitone-events' ); ?>">
+				<button type="button" class="de-fe-venue-nav-item is-active" data-venue="">
+					<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
+				</button>
+				<?php foreach ( $venue_options as $sub_id => $label ) : ?>
+					<button type="button" class="de-fe-venue-nav-item" data-venue="<?php echo esc_attr( $sub_id ); ?>">
+						<?php echo esc_html( $label ); ?>
+					</button>
+				<?php endforeach; ?>
+			</nav>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if ( empty( $days ) ) : ?>
@@ -160,7 +187,7 @@ $slot_minutes = 30;
 						<div class="de-fe-grid-corner" style="grid-row: 1; grid-column: 1"></div>
 
 						<?php foreach ( $all_halls_order as $hid ) : ?>
-							<div class="de-fe-grid-hall" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>">
+							<div class="de-fe-grid-hall" data-sub-venue-id="<?php echo esc_attr( $hid ); ?>" style="grid-row: 1; grid-column: <?php echo (int) $hall_col[ $hid ]; ?>">
 								<?php echo esc_html( $all_halls[ $hid ] ); ?>
 							</div>
 						<?php endforeach; ?>
@@ -199,9 +226,19 @@ $slot_minutes = 30;
 							$type_label = trim( ( $s['type_icon'] ?? '' ) . ' ' . ( $s['type_name'] ?? '' ) );
 							$time_label = $fmt( $st ) . ' – ' . $fmt( $en );
 						?>
+							<?php
+							// Compute the original grid-column string for filter restoration.
+							if ( $is_break ) {
+								$orig_grid_col = '2 / -1';
+							} else {
+								$orig_grid_col = (string) ( $hall_col[ $s['sub_venue_id'] ?? '' ] ?? 2 );
+							}
+							?>
 							<article class="de-fe-block<?php echo $is_break ? ' is-break' : ''; ?>"
 								style="<?php echo $style; ?>"
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
+								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
+								data-original-grid-column="<?php echo esc_attr( $orig_grid_col ); ?>"
 								<?php if ( ! $is_break ) : ?>tabindex="0" role="button"<?php endif; ?>>
 								<?php if ( $type_label ) : ?>
 									<div class="de-fe-block-type"><?php echo esc_html( $type_label ); ?></div>
@@ -236,32 +273,38 @@ $slot_minutes = 30;
 								if ( ! empty( $s['end_time'] ) ) $time .= ' – ' . DigitOne_Events_Helpers_Format::time_display( $s['end_time'] );
 							}
 							$venue       = $s['sub_venue_name'] ?? '';
-							$color       = $s['type_color'] ?? '#6b7280';
+							$type_clr    = $s['type_color'] ?? '#6b7280';
+							$hall_clr    = $hall_color[ $s['sub_venue_id'] ?? '' ] ?? '#6b7280';
 							$is_break_mi = ! empty( $s['type_name'] ) && strtolower( $s['type_name'] ) === 'break';
 							$speakers_mi = $s['speakers'] ?? [];
 						?>
 							<li class="de-fe-mobile-item<?php echo $is_break_mi ? ' is-break' : ''; ?>"
-								style="--type-color: <?php echo esc_attr( $color ); ?>"
+								style="--type-color: <?php echo esc_attr( $type_clr ); ?>; --hall-color: <?php echo esc_attr( $hall_clr ); ?>"
 								<?php if ( ! $is_break_mi ) : ?>
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
 								tabindex="0"
 								role="button"
 								<?php endif; ?>>
-								<div class="de-fe-mobile-time"><?php echo esc_html( $time ); ?></div>
-								<div class="de-fe-mobile-body">
+								<?php if ( $is_break_mi ) : ?>
+									<div class="de-fe-mobile-break-time"><?php echo esc_html( $time ); ?></div>
+									<div class="de-fe-mobile-break-title"><?php echo esc_html( ( $s['type_icon'] ?? '' ) . ' ' . ( $s['title'] ?? '' ) ); ?></div>
+								<?php else : ?>
+									<div class="de-fe-mobile-top">
+										<?php if ( $venue ) : ?>
+											<span class="de-fe-mobile-hall-pill"><?php echo esc_html( $venue ); ?></span>
+										<?php endif; ?>
+										<span class="de-fe-mobile-time"><?php echo esc_html( $time ); ?></span>
+									</div>
 									<?php if ( $type_label ) : ?>
-										<span class="de-fe-mobile-type"><?php echo esc_html( $type_label ); ?></span>
+										<div class="de-fe-mobile-type"><?php echo esc_html( $type_label ); ?></div>
 									<?php endif; ?>
 									<div class="de-fe-mobile-title"><?php echo esc_html( $s['title'] ); ?></div>
-									<?php if ( $venue ) : ?>
-										<div class="de-fe-mobile-venue"><?php echo esc_html( $venue ); ?></div>
-									<?php endif; ?>
-									<?php if ( ! empty( $speakers_mi ) && ! $is_break_mi ) : ?>
+									<?php if ( ! empty( $speakers_mi ) ) : ?>
 										<div class="de-fe-mobile-speakers">
 											<?php
 											$names_mi = [];
 											foreach ( array_slice( $speakers_mi, 0, 3 ) as $sp ) {
-												$names_mi[] = trim( $sp['first_name'] . ' ' . $sp['last_name'] );
+												$names_mi[] = trim( ( $sp['first_name'] ?? '' ) . ' ' . ( $sp['last_name'] ?? '' ) );
 											}
 											echo esc_html( implode( ' · ', $names_mi ) );
 											if ( count( $speakers_mi ) > 3 ) {
@@ -270,7 +313,7 @@ $slot_minutes = 30;
 											?>
 										</div>
 									<?php endif; ?>
-								</div>
+								<?php endif; ?>
 							</li>
 						<?php endforeach; ?>
 					</ul>

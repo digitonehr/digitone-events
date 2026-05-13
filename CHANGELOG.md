@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-05-13
+
+### Fixed
+- **Speaker photos in the modal no longer get vertically stretched on mobile** (and in some desktop themes). Block themes commonly apply `img { height: auto !important; max-width: 100%; }` to make embedded images responsive, which was overriding our `height: 56px`. We now lock the modal photo with `width/height/min/max + aspect-ratio: 1 / 1`, all `!important`, so theme defaults can't squash or stretch it. Same hardening applied to the speakers-grid avatars in the `[digitone_events_speakers]` shortcode (110px).
+
+### Added
+- **Venue filter** below the day picker. A horizontal pill row labelled "All venues" (default) + one pill per unique sub-venue, each combining its primary venue and sub-venue name as "Primary — Sub" (e.g. *"Sheraton Dubrovnik Riviera Hotel — Hall A"*).
+  - Default on page load: "All venues" is active and the grid renders exactly as before.
+  - Click a venue pill → grid collapses to a single column showing only that hall's sessions; break-type sessions stay visible because they apply to the whole event.
+  - The mobile list view filters the same way (non-matching items hidden, breaks always visible).
+  - Filter state persists across day switches.
+  - Click "All venues" → grid restores to its multi-hall layout with all blocks visible.
+
+### Technical notes
+- Filter logic lives entirely in the front-end JS; nothing changes on the server. Each block, hall header, and mobile item now carries `data-sub-venue-id` for matching. Blocks also carry `data-original-grid-column` so the JS can restore their position when filtering is cleared.
+
 ## [0.7.1] - 2026-05-13
 
 ### Fixed
@@ -13,6 +29,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.2] - 2026-05-13
+
+### Fixed
+- **Speaker photos in the modal no longer get vertically stretched on mobile** (and in some desktop themes). Block themes commonly apply `img { height: auto !important; max-width: 100%; }` to make embedded images responsive, which was overriding our `height: 56px`. We now lock the modal photo with `width/height/min/max + aspect-ratio: 1 / 1`, all `!important`, so theme defaults can't squash or stretch it. Same hardening applied to the speakers-grid avatars in the `[digitone_events_speakers]` shortcode (110px).
+
+### Added
+- **Venue filter** below the day picker. A horizontal pill row labelled "All venues" (default) + one pill per unique sub-venue, each combining its primary venue and sub-venue name as "Primary — Sub" (e.g. *"Sheraton Dubrovnik Riviera Hotel — Hall A"*).
+  - Default on page load: "All venues" is active and the grid renders exactly as before.
+  - Click a venue pill → grid collapses to a single column showing only that hall's sessions; break-type sessions stay visible because they apply to the whole event.
+  - The mobile list view filters the same way (non-matching items hidden, breaks always visible).
+  - Filter state persists across day switches.
+  - Click "All venues" → grid restores to its multi-hall layout with all blocks visible.
+
+### Technical notes
+- Filter logic lives entirely in the front-end JS; nothing changes on the server. Each block, hall header, and mobile item now carries `data-sub-venue-id` for matching. Blocks also carry `data-original-grid-column` so the JS can restore their position when filtering is cleared.
+
+## [0.7.1] - 2026-05-13
+
+### Fixed / Changed — Mobile UX polish
+
+- **Hall colour-coding on mobile.** With the desktop's per-hall columns lost to a single-column phone layout, halls now get distinct auto-assigned colours (blue / pink / teal / orange / purple / red / green / cyan, cycling for events with 8+ halls). Each mobile card has a 5px coloured left border matching its hall, plus a coloured pill at the top of the card with the hall name — so it's obvious at a glance whether a 13:00 session is in Hall A or Hall C.
+- **Mobile card layout redesigned.** Top row shows the hall pill (left) and time (right); below that, the type label, then title, then speakers. Previously time was a separate column on the left which wasted space and pushed everything else over.
+- **Break sessions on mobile** render as a centred dashed ribbon (matches the visual language of the desktop break row).
+- **Tap-to-open detail modal works on mobile** — the JS click handler already accepts both `.de-fe-block` and `.de-fe-mobile-item` selectors. If you're still not seeing the modal open or speakers listed on your phone after this update, your browser is serving cached HTML/JS. Pull-to-refresh on the page, or close + reopen the tab, to force a fresh load.
+
+### Notes on caching
+- Versioned asset URLs (`?ver=0.7.1`) bust the browser cache for CSS/JS automatically.
+- The agenda HTML itself isn't versioned. If a page cache plugin (LiteSpeed, WP Rocket, W3 Total Cache, host-level full-page caching) is active, purge the cache for the agenda page after upgrading.
 
 ## [0.7.0] - 2026-05-13
 

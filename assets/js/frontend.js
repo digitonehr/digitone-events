@@ -11,6 +11,7 @@
 		setupDaySwitcher( schedule );
 		swapTitle( schedule );
 		setupSessionModal( schedule );
+		setupVenueFilter( schedule );
 	}
 
 	/* ============================================================
@@ -220,6 +221,94 @@
 	}
 	function escapeAttr( s ) {
 		return escapeHtml( s );
+	}
+
+	/* ============================================================
+	 * Venue filter — hides blocks/headers/mobile items that don't match.
+	 * "All venues" (data-venue="") restores the full grid.
+	 * Break-type sessions are always visible (they apply to everyone).
+	 * ============================================================ */
+	function setupVenueFilter( schedule ) {
+		const venueNav = schedule.querySelector( '.de-fe-venue-nav' );
+		if ( ! venueNav ) return;
+		const buttons = venueNav.querySelectorAll( '.de-fe-venue-nav-item' );
+		const grids   = schedule.querySelectorAll( '.de-fe-schedule-grid' );
+		const lists   = schedule.querySelectorAll( '.de-fe-mobile-list' );
+		if ( ! buttons.length ) return;
+
+		function apply( venueId ) {
+			buttons.forEach( function ( b ) {
+				b.classList.toggle( 'is-active', b.getAttribute( 'data-venue' ) === venueId );
+				b.setAttribute( 'aria-pressed', b.getAttribute( 'data-venue' ) === venueId ? 'true' : 'false' );
+			} );
+
+			grids.forEach( function ( grid ) {
+				const blocks  = grid.querySelectorAll( '.de-fe-block' );
+				const headers = grid.querySelectorAll( '.de-fe-grid-hall' );
+
+				if ( ! venueId ) {
+					// Restore everything.
+					grid.style.gridTemplateColumns = '';
+					grid.classList.remove( 'is-venue-filtered' );
+					blocks.forEach( function ( b ) {
+						b.classList.remove( 'is-filtered-out' );
+						const orig = b.getAttribute( 'data-original-grid-column' );
+						if ( orig ) {
+							// Reapply the original grid-column from inline style (the style attribute already has it)
+							b.style.gridColumn = orig;
+						}
+					} );
+					headers.forEach( function ( h ) { h.classList.remove( 'is-filtered-out' ); } );
+					return;
+				}
+
+				// Filtered: shrink grid to a single hall column.
+				grid.classList.add( 'is-venue-filtered' );
+				grid.style.gridTemplateColumns = '70px minmax(200px, 1fr)';
+
+				blocks.forEach( function ( b ) {
+					const isBreak = b.classList.contains( 'is-break' );
+					if ( isBreak ) {
+						b.classList.remove( 'is-filtered-out' );
+						b.style.gridColumn = '2 / -1';
+					} else if ( b.getAttribute( 'data-sub-venue-id' ) === venueId ) {
+						b.classList.remove( 'is-filtered-out' );
+						b.style.gridColumn = '2';
+					} else {
+						b.classList.add( 'is-filtered-out' );
+					}
+				} );
+
+				headers.forEach( function ( h ) {
+					const match = h.getAttribute( 'data-sub-venue-id' ) === venueId;
+					h.classList.toggle( 'is-filtered-out', ! match );
+					if ( match ) {
+						h.style.gridColumn = '2';
+					}
+				} );
+			} );
+
+			// Mobile list: simple show/hide.
+			lists.forEach( function ( list ) {
+				list.querySelectorAll( '.de-fe-mobile-item' ).forEach( function ( item ) {
+					const isBreak = item.classList.contains( 'is-break' );
+					if ( isBreak || ! venueId || item.getAttribute( 'data-sub-venue-id' ) === venueId ) {
+						item.classList.remove( 'is-filtered-out' );
+					} else {
+						item.classList.add( 'is-filtered-out' );
+					}
+				} );
+			} );
+		}
+
+		buttons.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function ( ev ) {
+				ev.preventDefault();
+				apply( btn.getAttribute( 'data-venue' ) || '' );
+			} );
+		} );
+
+		// Default state: no filter ("All venues" already has is-active in markup).
 	}
 
 	document.addEventListener( 'DOMContentLoaded', function () {
