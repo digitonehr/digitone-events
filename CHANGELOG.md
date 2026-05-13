@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-13
+
+### Added — A-bundle continuation: print stylesheet (2/3 of finale)
+- **Color print / "Save as PDF" stylesheet for the agenda.** Hitting Ctrl/Cmd+P (or *File → Print*) on a page that hosts the `[digitone_events_schedule]` shortcode now produces a clean A4-portrait document with:
+  - **All hall colours preserved** via `-webkit-print-color-adjust: exact` + `print-color-adjust: exact`. Hall A stays blue, Hall B pink, type badges keep their per-type colour, Break sessions keep their amber ribbon.
+  - **All days included** (the on-screen "active day only" rule is overridden so the printed PDF is the whole event).
+  - **Mobile-list layout** is used for print regardless of viewport — stacks cleanly on portrait paper without truncated columns. Speaker lists fully unfold (no `+N` overflow indicators).
+  - **Page break before each day** (except the first), `page-break-inside: avoid` on individual session rows so you don't get a title split between pages.
+  - **Filters are ignored on print** — even if "Hall B + Lecture" is currently active in the on-screen UI, the printed PDF is the full programme (`.is-filtered-out` rule is overridden inside `@media print`).
+- **UI chrome stripped from print**: the filters accordion, day picker, "Add to calendar" buttons, session detail modal, and the WP admin bar are all hidden.
+
+### Notes for users
+- In Chrome/Edge's print dialog the **"Background graphics"** toggle is honoured if turned on. With `print-color-adjust: exact`, modern browsers should keep colours regardless, but in some niche browser-OS combos you may need to enable "Background graphics" to see hall/type colours. Firefox honours `print-color-adjust` automatically.
+- "Save as PDF" works exactly the same way as printing — same stylesheet kicks in.
+
+### Coming in 0.8.1
+- Speakers shortcode polish (search box + filter by role + sort by surname). Completes the A bundle.
+
 ## [0.7.9] - 2026-05-13
 
 ### Added — A-bundle continuation: search + type + speaker filters
@@ -127,6 +145,24 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.0] - 2026-05-13
+
+### Added — A-bundle continuation: print stylesheet (2/3 of finale)
+- **Color print / "Save as PDF" stylesheet for the agenda.** Hitting Ctrl/Cmd+P (or *File → Print*) on a page that hosts the `[digitone_events_schedule]` shortcode now produces a clean A4-portrait document with:
+  - **All hall colours preserved** via `-webkit-print-color-adjust: exact` + `print-color-adjust: exact`. Hall A stays blue, Hall B pink, type badges keep their per-type colour, Break sessions keep their amber ribbon.
+  - **All days included** (the on-screen "active day only" rule is overridden so the printed PDF is the whole event).
+  - **Mobile-list layout** is used for print regardless of viewport — stacks cleanly on portrait paper without truncated columns. Speaker lists fully unfold (no `+N` overflow indicators).
+  - **Page break before each day** (except the first), `page-break-inside: avoid` on individual session rows so you don't get a title split between pages.
+  - **Filters are ignored on print** — even if "Hall B + Lecture" is currently active in the on-screen UI, the printed PDF is the full programme (`.is-filtered-out` rule is overridden inside `@media print`).
+- **UI chrome stripped from print**: the filters accordion, day picker, "Add to calendar" buttons, session detail modal, and the WP admin bar are all hidden.
+
+### Notes for users
+- In Chrome/Edge's print dialog the **"Background graphics"** toggle is honoured if turned on. With `print-color-adjust: exact`, modern browsers should keep colours regardless, but in some niche browser-OS combos you may need to enable "Background graphics" to see hall/type colours. Firefox honours `print-color-adjust` automatically.
+- "Save as PDF" works exactly the same way as printing — same stylesheet kicks in.
+
+### Coming in 0.8.1
+- Speakers shortcode polish (search box + filter by role + sort by surname). Completes the A bundle.
 
 ## [0.7.9] - 2026-05-13
 

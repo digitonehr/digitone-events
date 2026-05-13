@@ -1223,3 +1223,260 @@ body.de-fe-modal-open {
 		font-size: 12px;
 	}
 }
+
+/* ============================================================ */
+/* PRINT STYLESHEET (v0.8.0) — color, A4, all days visible      */
+/* ============================================================ */
+@media print {
+
+	/* Force color rendering in browsers' print engine */
+	*,
+	*::before,
+	*::after {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	@page {
+		size: A4 portrait;
+		margin: 12mm 14mm;
+	}
+
+	body {
+		font-family: var(--defe-font, "Inter", -apple-system, system-ui, sans-serif);
+		color: #1a1a1a;
+		background: #fff;
+		font-size: 10pt;
+	}
+
+	/* Hide every interactive / decorative chrome element */
+	.digitone-events-schedule .de-fe-header-actions,
+	.digitone-events-schedule .de-fe-day-nav,
+	.digitone-events-schedule .de-fe-filters,
+	.digitone-events-schedule .de-fe-session-modal,
+	.digitone-events-schedule .de-fe-mobile-more,
+	.digitone-events-schedule .de-fe-block-more {
+		display: none !important;
+	}
+
+	/* Frontend wrapper — break out of theme's narrow content column */
+	.digitone-events-frontend,
+	.digitone-events-schedule {
+		display: block !important;
+		background: #fff !important;
+		padding: 0 !important;
+		max-width: none !important;
+		margin: 0 !important;
+		box-shadow: none !important;
+	}
+
+	/* All days visible — override the is-active-only screen rule. */
+	.digitone-events-schedule .de-fe-schedule-day {
+		display: block !important;
+		page-break-before: always;
+		margin: 0 0 6mm;
+	}
+	.digitone-events-schedule .de-fe-schedule-day:first-of-type {
+		page-break-before: avoid;
+	}
+
+	/* Switch to mobile-list layout on print — it stacks cleanly on A4
+	   regardless of how many halls the event has. */
+	.digitone-events-schedule .de-fe-schedule-grid {
+		display: none !important;
+	}
+	.digitone-events-schedule .de-fe-mobile-list {
+		display: block !important;
+		list-style: none !important;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+
+	/* Filter state has no meaning on print — show everything. */
+	.digitone-events-schedule .de-fe-mobile-list .de-fe-mobile-item.is-filtered-out {
+		display: grid !important;
+	}
+
+	/* Event header */
+	.digitone-events-schedule .de-fe-header {
+		margin: 0 0 6mm !important;
+		padding: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-title {
+		font-size: 18pt !important;
+		font-weight: 800 !important;
+		margin: 0 !important;
+		color: #0f172a !important;
+		letter-spacing: -0.01em;
+	}
+	.digitone-events-schedule .de-fe-event-dates {
+		font-size: 11pt !important;
+		color: #475569 !important;
+		margin-top: 1mm !important;
+	}
+	.digitone-events-schedule .de-fe-description {
+		font-size: 9pt !important;
+		color: #475569 !important;
+		margin-top: 2mm !important;
+		line-height: 1.4;
+	}
+
+	/* Day header */
+	.digitone-events-schedule .de-fe-day-header {
+		background: #0f172a !important;
+		color: #fff !important;
+		padding: 3mm 5mm !important;
+		margin: 0 0 4mm !important;
+		border-radius: 1mm !important;
+		page-break-after: avoid;
+		page-break-inside: avoid;
+		display: flex !important;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 4mm;
+	}
+	.digitone-events-schedule .de-fe-day-header .de-fe-day-pill,
+	.digitone-events-schedule .de-fe-day-header .de-fe-day-num {
+		font-size: 9pt !important;
+		opacity: 0.7;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+	.digitone-events-schedule .de-fe-day-header .de-fe-day-date {
+		font-size: 13pt !important;
+		font-weight: 700 !important;
+	}
+	.digitone-events-schedule .de-fe-day-header .de-fe-day-label {
+		font-size: 10pt !important;
+		opacity: 0.85;
+	}
+
+	/* Session row (mobile-item used as the print row) */
+	.digitone-events-schedule .de-fe-mobile-item {
+		display: grid !important;
+		grid-template-columns: 22mm 1fr !important;
+		gap: 4mm !important;
+		padding: 3mm 4mm !important;
+		margin: 0 0 2.5mm !important;
+		border: 1px solid #d1d5db !important;
+		border-left: 4pt solid var(--type-color, #6b7280) !important;
+		background: #fff !important;
+		border-radius: 1mm !important;
+		page-break-inside: avoid;
+	}
+
+	/* Time column */
+	.digitone-events-schedule .de-fe-mobile-time {
+		font-weight: 700 !important;
+		font-size: 9.5pt !important;
+		color: #000 !important;
+		padding-top: 0 !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Body */
+	.digitone-events-schedule .de-fe-mobile-top {
+		display: flex !important;
+		align-items: center;
+		gap: 5pt;
+		margin-bottom: 1mm;
+	}
+	.digitone-events-schedule .de-fe-mobile-hall-pill {
+		display: inline-block !important;
+		background: var(--hall-color, #6b7280) !important;
+		color: #fff !important;
+		font-size: 7.5pt !important;
+		font-weight: 700;
+		padding: 1pt 6pt !important;
+		border-radius: 8pt !important;
+		text-shadow: 0 0.5pt 1pt rgba(0,0,0,0.15);
+	}
+	.digitone-events-schedule .de-fe-mobile-type {
+		display: block !important;
+		font-size: 8pt !important;
+		font-weight: 700;
+		color: var(--type-color, #444) !important;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		margin-bottom: 0.5mm;
+	}
+	.digitone-events-schedule .de-fe-mobile-title {
+		font-size: 11pt !important;
+		font-weight: 700 !important;
+		color: #0f172a !important;
+		line-height: 1.3 !important;
+		margin: 0.5mm 0 !important;
+		-webkit-line-clamp: unset !important;
+		display: block !important;
+		overflow: visible !important;
+	}
+	.digitone-events-schedule .de-fe-mobile-venue {
+		font-size: 8.5pt !important;
+		color: #6b7280 !important;
+		margin: 0.5mm 0;
+	}
+	.digitone-events-schedule .de-fe-mobile-speakers {
+		font-size: 9pt !important;
+		color: #1f2937 !important;
+		margin-top: 1mm !important;
+		line-height: 1.4 !important;
+		-webkit-line-clamp: unset !important;
+		display: block !important;
+		overflow: visible !important;
+	}
+
+	/* Break ribbon — keep cheerful amber on paper too */
+	.digitone-events-schedule .de-fe-mobile-item.is-break {
+		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+		border: 1px solid #fbbf24 !important;
+		border-left: 4pt solid #f59e0b !important;
+		grid-template-columns: 22mm 1fr !important;
+		padding: 2mm 4mm !important;
+		text-align: left;
+	}
+	.digitone-events-schedule .de-fe-mobile-break-time {
+		font-size: 9.5pt !important;
+		font-weight: 700 !important;
+		color: #78350f !important;
+		padding-top: 0 !important;
+	}
+	.digitone-events-schedule .de-fe-mobile-break-title {
+		font-size: 11pt !important;
+		font-weight: 700 !important;
+		color: #78350f !important;
+	}
+
+	/* Cleanup of decorative effects that don't make sense on paper */
+	.digitone-events-schedule *,
+	.digitone-events-schedule *::before,
+	.digitone-events-schedule *::after {
+		box-shadow: none !important;
+		text-shadow: none !important;
+		animation: none !important;
+		transition: none !important;
+	}
+
+	/* Re-apply the few text-shadows we DO want for legibility on coloured backgrounds */
+	.digitone-events-schedule .de-fe-mobile-hall-pill,
+	.digitone-events-schedule .de-fe-mobile-break-title {
+		text-shadow: 0 0.5pt 1pt rgba(0,0,0,0.1) !important;
+	}
+
+	/* Links: no URL printouts, no underlines */
+	.digitone-events-schedule a {
+		color: inherit !important;
+		text-decoration: none !important;
+	}
+	.digitone-events-schedule a::after {
+		content: none !important;
+	}
+
+	/* Hide WP admin bar if present */
+	#wpadminbar {
+		display: none !important;
+	}
+	html.wp-toolbar {
+		margin-top: 0 !important;
+		padding-top: 0 !important;
+	}
+}
