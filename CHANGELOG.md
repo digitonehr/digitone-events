@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2026-05-13
+
+### Added
+- **Filters accordion.** The whole venue/hall picker now lives inside a collapsible "Filters" section that is closed by default. Click the header to expand and pick a filter. Implementation uses the native `<details>` + `<summary>` HTML pair, which gives keyboard support, screen-reader semantics, and the open/close animation for free. The chevron rotates 90° when open.
+- **Active filter is shown in the accordion title.** When the accordion is collapsed and a filter is applied, the title reads e.g. *"Filters: Hall B"* or *"Filters: Test venue"* so users can see what's filtered without expanding.
+
+### Changed
+- **Sub-venue labels are now context-aware in multi-primary mode.** Previously every sub pill always carried its primary's name (e.g. *"Sheraton Dubrovnik Riviera Hotel — Hall A"*). Now: when a specific primary venue is selected, the still-visible sub pills shorten to just their sub-venue name (e.g. *"Hall A"*) because the parent primary is already implied by the active primary pill above. When "All venues" is active, the long *"Primary — Sub"* form is restored so each pill stays unambiguous. Single-primary events are unchanged (labels were already just the sub name).
+
+### Internal
+- Each sub-venue pill now carries `data-label-short` (sub name alone) and `data-label-long` (`Primary — Sub`) attributes. The new `updateSubLabels()` swaps `.textContent` between them based on `currentPrimary`.
+- `updateFilterStatus()` writes the active filter text into the `[data-de-active-label]` slot in the accordion summary on every filter change.
+
 ## [0.7.6] - 2026-05-13
 
 ### Changed
@@ -75,6 +88,19 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.7] - 2026-05-13
+
+### Added
+- **Filters accordion.** The whole venue/hall picker now lives inside a collapsible "Filters" section that is closed by default. Click the header to expand and pick a filter. Implementation uses the native `<details>` + `<summary>` HTML pair, which gives keyboard support, screen-reader semantics, and the open/close animation for free. The chevron rotates 90° when open.
+- **Active filter is shown in the accordion title.** When the accordion is collapsed and a filter is applied, the title reads e.g. *"Filters: Hall B"* or *"Filters: Test venue"* so users can see what's filtered without expanding.
+
+### Changed
+- **Sub-venue labels are now context-aware in multi-primary mode.** Previously every sub pill always carried its primary's name (e.g. *"Sheraton Dubrovnik Riviera Hotel — Hall A"*). Now: when a specific primary venue is selected, the still-visible sub pills shorten to just their sub-venue name (e.g. *"Hall A"*) because the parent primary is already implied by the active primary pill above. When "All venues" is active, the long *"Primary — Sub"* form is restored so each pill stays unambiguous. Single-primary events are unchanged (labels were already just the sub name).
+
+### Internal
+- Each sub-venue pill now carries `data-label-short` (sub name alone) and `data-label-long` (`Primary — Sub`) attributes. The new `updateSubLabels()` swaps `.textContent` between them based on `currentPrimary`.
+- `updateFilterStatus()` writes the active filter text into the `[data-de-active-label]` slot in the accordion summary on every filter change.
 
 ## [0.7.6] - 2026-05-13
 

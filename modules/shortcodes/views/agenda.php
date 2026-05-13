@@ -166,36 +166,51 @@ $slot_minutes = 30;
 		</nav>
 
 		<?php if ( ! empty( $venue_options ) ) : ?>
-			<?php if ( $multi_primary ) : ?>
-				<nav class="de-fe-primary-nav" aria-label="<?php esc_attr_e( 'Filter by venue', 'digitone-events' ); ?>">
-					<button type="button" class="de-fe-primary-nav-item is-active" data-primary="">
-						<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
-					</button>
-					<?php foreach ( $primary_venues as $pid => $pname ) : ?>
-						<button type="button" class="de-fe-primary-nav-item" data-primary="<?php echo esc_attr( $pid ); ?>">
-							<?php echo esc_html( $pname ); ?>
-						</button>
-					<?php endforeach; ?>
-				</nav>
-			<?php endif; ?>
-			<nav class="de-fe-venue-nav" aria-label="<?php echo $multi_primary ? esc_attr__( 'Filter by hall', 'digitone-events' ) : esc_attr__( 'Filter by venue', 'digitone-events' ); ?>">
-				<?php if ( ! $multi_primary ) : ?>
-					<button type="button" class="de-fe-venue-nav-item is-active" data-venue="">
-						<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
-					</button>
-				<?php endif; ?>
-				<?php foreach ( $venue_options_order as $vo ) :
-					$sub_id = $vo['id'];
-					$opt    = $venue_options[ $sub_id ];
-				?>
-					<button type="button" class="de-fe-venue-nav-item"
-						data-venue="<?php echo esc_attr( $sub_id ); ?>"
-						data-primary="<?php echo esc_attr( $opt['primary_id'] ); ?>"
-						style="--hall-color: <?php echo esc_attr( $opt['color'] ); ?>">
-						<?php echo esc_html( $opt['label'] ); ?>
-					</button>
-				<?php endforeach; ?>
-			</nav>
+			<details class="de-fe-filters">
+				<summary class="de-fe-filters-summary">
+					<span class="de-fe-filters-chevron" aria-hidden="true"></span>
+					<span class="de-fe-filters-label"><?php esc_html_e( 'Filters', 'digitone-events' ); ?></span>
+					<span class="de-fe-filters-active" data-de-active-label></span>
+				</summary>
+				<div class="de-fe-filters-body">
+					<?php if ( $multi_primary ) : ?>
+						<nav class="de-fe-primary-nav" aria-label="<?php esc_attr_e( 'Filter by venue', 'digitone-events' ); ?>">
+							<button type="button" class="de-fe-primary-nav-item is-active" data-primary="">
+								<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
+							</button>
+							<?php foreach ( $primary_venues as $pid => $pname ) : ?>
+								<button type="button" class="de-fe-primary-nav-item" data-primary="<?php echo esc_attr( $pid ); ?>">
+									<?php echo esc_html( $pname ); ?>
+								</button>
+							<?php endforeach; ?>
+						</nav>
+					<?php endif; ?>
+					<nav class="de-fe-venue-nav" aria-label="<?php echo $multi_primary ? esc_attr__( 'Filter by hall', 'digitone-events' ) : esc_attr__( 'Filter by venue', 'digitone-events' ); ?>">
+						<?php if ( ! $multi_primary ) : ?>
+							<button type="button" class="de-fe-venue-nav-item is-active" data-venue="">
+								<?php esc_html_e( 'All venues', 'digitone-events' ); ?>
+							</button>
+						<?php endif; ?>
+						<?php foreach ( $venue_options_order as $vo ) :
+							$sub_id    = $vo['id'];
+							$opt       = $venue_options[ $sub_id ];
+							// Short label = sub-venue name alone (used when its parent primary is the active filter).
+							// Long label  = full "Primary — Sub" (used when "All venues" is active in multi-primary mode).
+							$short_lbl = $opt['name'] ?: $opt['label'];
+							$long_lbl  = $opt['label'];
+						?>
+							<button type="button" class="de-fe-venue-nav-item"
+								data-venue="<?php echo esc_attr( $sub_id ); ?>"
+								data-primary="<?php echo esc_attr( $opt['primary_id'] ); ?>"
+								data-label-short="<?php echo esc_attr( $short_lbl ); ?>"
+								data-label-long="<?php echo esc_attr( $long_lbl ); ?>"
+								style="--hall-color: <?php echo esc_attr( $opt['color'] ); ?>">
+								<?php echo esc_html( $long_lbl ); ?>
+							</button>
+						<?php endforeach; ?>
+					</nav>
+				</div>
+			</details>
 		<?php endif; ?>
 	<?php endif; ?>
 

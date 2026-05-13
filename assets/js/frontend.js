@@ -282,6 +282,48 @@
 			return !! currentSub || !! currentPrimary;
 		}
 
+		function updateSubLabels() {
+			// When a specific primary is selected, use the short ("Sub" only)
+			// label for the sub pills belonging to that primary — the primary
+			// name is already conveyed by the active primary pill above.
+			// When "All venues" is active, use the long ("Primary — Sub") label
+			// so each pill is unambiguous in multi-primary mode.
+			venueButtons.forEach( function ( btn ) {
+				if ( ! btn.getAttribute( 'data-venue' ) ) return;
+				const useShort = currentPrimary && btn.getAttribute( 'data-primary' ) === currentPrimary;
+				const labelShort = btn.getAttribute( 'data-label-short' );
+				const labelLong  = btn.getAttribute( 'data-label-long' );
+				if ( useShort && labelShort ) {
+					btn.textContent = labelShort;
+				} else if ( labelLong ) {
+					btn.textContent = labelLong;
+				}
+			} );
+		}
+
+		function updateFilterStatus() {
+			// Surface the active filter next to the accordion title so users
+			// know what's filtered when the accordion is collapsed.
+			const statusEl = schedule.querySelector( '[data-de-active-label]' );
+			if ( ! statusEl ) return;
+			if ( ! activeFilterPresent() ) {
+				statusEl.textContent = '';
+				return;
+			}
+			if ( currentSub ) {
+				const btn = venueNav.querySelector( '[data-venue="' + currentSub + '"]' );
+				if ( btn ) {
+					const lbl = btn.getAttribute( 'data-label-long' ) || btn.textContent;
+					statusEl.textContent = ': ' + lbl;
+				}
+				return;
+			}
+			if ( currentPrimary && primaryNav ) {
+				const btn = primaryNav.querySelector( '[data-primary="' + currentPrimary + '"]' );
+				if ( btn ) statusEl.textContent = ': ' + btn.textContent.trim();
+			}
+		}
+
 		function syncButtonsActive() {
 			primaryButtons.forEach( function ( b ) {
 				const isAll  = ! b.getAttribute( 'data-primary' );
@@ -310,6 +352,8 @@
 
 		function apply() {
 			syncButtonsActive();
+			updateSubLabels();
+			updateFilterStatus();
 
 			grids.forEach( function ( grid ) {
 				const blocks  = grid.querySelectorAll( '.de-fe-block' );

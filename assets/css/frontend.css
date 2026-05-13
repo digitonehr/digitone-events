@@ -995,3 +995,76 @@ body.de-fe-modal-open {
 		padding: 6px 12px;
 	}
 }
+
+
+/* ============================================================ */
+/* FILTERS ACCORDION (v0.7.7) — <details> + <summary>           */
+/* ============================================================ */
+.de-fe-filters {
+	margin: 0 0 24px;
+	border: 1px solid var(--defe-border);
+	border-radius: var(--defe-radius);
+	background: var(--defe-bg);
+	overflow: hidden;
+}
+.de-fe-filters-summary {
+	cursor: pointer;
+	padding: 12px 16px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	font-size: 14px;
+	color: var(--defe-text);
+	user-select: none;
+	list-style: none;
+	background: var(--defe-bg);
+	transition: background 0.15s ease;
+}
+.de-fe-filters-summary::-webkit-details-marker {
+	display: none;
+}
+.de-fe-filters-summary::marker {
+	display: none;
+}
+.de-fe-filters-summary:hover {
+	background: var(--defe-bg-alt);
+}
+.de-fe-filters-summary:focus-visible {
+	outline: 2px solid var(--defe-primary);
+	outline-offset: -2px;
+}
+.de-fe-filters-chevron {
+	display: inline-block;
+	width: 0;
+	height: 0;
+	border-left: 6px solid var(--defe-text-soft);
+	border-top: 5px solid transparent;
+	border-bottom: 5px solid transparent;
+	transition: transform 0.2s ease;
+	flex-shrink: 0;
+	margin-right: 2px;
+}
+.de-fe-filters[open] .de-fe-filters-chevron {
+	transform: rotate(90deg);
+}
+.de-fe-filters-label {
+	letter-spacing: 0.02em;
+}
+.de-fe-filters-active {
+	color: var(--defe-text-soft);
+	font-weight: 500;
+	font-size: 13px;
+}
+.de-fe-filters-body {
+	padding: 14px 16px 16px;
+	border-top: 1px solid var(--defe-border);
+	background: var(--defe-bg-alt);
+}
+.de-fe-filters-body .de-fe-primary-nav,
+.de-fe-filters-body .de-fe-venue-nav {
+	margin-bottom: 0;
+}
+.de-fe-filters-body .de-fe-primary-nav {
+	margin-bottom: 10px;
+}
