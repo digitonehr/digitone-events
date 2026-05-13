@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.9] - 2026-05-13
+
+### Added — A-bundle continuation: search + type + speaker filters
+
+- **Free-text search box** above the type picker in the Filters accordion. Matches against session title, every speaker's first + last name, the session type name, and the sub-venue name (all lowercased + UTF-8 normalised so Croatian diacritics like *Veršić* match *versic*). Input is debounced ~200 ms so typing in long queries isn't laggy. A circular ✕ clear button appears once the field is non-empty.
+- **Session type picker.** Horizontal pill row inside the accordion with one "All types" pill and one pill per unique session type used in the event. Each type pill uses its session-type colour as the active background (the same colour the type badge shows on each block), so picking *Lecture* turns the pill blue, *Nursing Session* pink, etc.
+- **Speaker dropdown.** Standard `<select>` listing every speaker who appears in any of the event's sessions, sorted alphabetically by last name. Browsers' built-in type-ahead means you can press *B* and jump straight to *Bosak Veršić, Ana*. Picking a speaker filters to sessions they participate in.
+
+### Changed
+- **Filter logic now composes 5 dimensions** instead of just venue: search · type · speaker · primary venue · sub venue. They AND-combine — a block is visible only if every active dimension matches.
+- **Column layout is driven by venue filter only.** Type/speaker/search narrow visibility within the columns the venue filter chose, so picking *Lecture* doesn't collapse a 4-column Sheraton view to 1 column just because only some halls have lecture sessions.
+- **Active-filter status** in the accordion title shows the single active label when only one filter is set (`Filters: Hall B`) or a count when 2+ are set (`Filters (3 active)`).
+
+### Internal
+- `setupVenueFilter` was renamed and generalised to `setupFilters`. Five `matches*` predicates (`matchesVenue`, `matchesType`, `matchesSpeaker`, `matchesSearch`, `matchesAll`) compose. `matchesVenue` is still used standalone for column layout; `matchesAll` for visibility.
+- Each block + mobile item now carries `data-type-id`, `data-speaker-ids` (comma-separated), and `data-search-text` (pre-lowercased UTF-8 string). Server-side pre-computation keeps the JS hot path cheap — no per-keystroke string normalisation, just a substring match against an attribute.
+- PHP collects `$type_options` and `$speaker_options` once when rendering the agenda; they sort by type name and speaker last name respectively.
+
+### Coming in 0.8.x
+- Print stylesheet (colour PDF via `@media print`)
+- Speakers shortcode polish (search, role filter, surname sort)
+
 ## [0.7.8] - 2026-05-13
 
 ### Changed
@@ -105,6 +127,28 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.7.9] - 2026-05-13
+
+### Added — A-bundle continuation: search + type + speaker filters
+
+- **Free-text search box** above the type picker in the Filters accordion. Matches against session title, every speaker's first + last name, the session type name, and the sub-venue name (all lowercased + UTF-8 normalised so Croatian diacritics like *Veršić* match *versic*). Input is debounced ~200 ms so typing in long queries isn't laggy. A circular ✕ clear button appears once the field is non-empty.
+- **Session type picker.** Horizontal pill row inside the accordion with one "All types" pill and one pill per unique session type used in the event. Each type pill uses its session-type colour as the active background (the same colour the type badge shows on each block), so picking *Lecture* turns the pill blue, *Nursing Session* pink, etc.
+- **Speaker dropdown.** Standard `<select>` listing every speaker who appears in any of the event's sessions, sorted alphabetically by last name. Browsers' built-in type-ahead means you can press *B* and jump straight to *Bosak Veršić, Ana*. Picking a speaker filters to sessions they participate in.
+
+### Changed
+- **Filter logic now composes 5 dimensions** instead of just venue: search · type · speaker · primary venue · sub venue. They AND-combine — a block is visible only if every active dimension matches.
+- **Column layout is driven by venue filter only.** Type/speaker/search narrow visibility within the columns the venue filter chose, so picking *Lecture* doesn't collapse a 4-column Sheraton view to 1 column just because only some halls have lecture sessions.
+- **Active-filter status** in the accordion title shows the single active label when only one filter is set (`Filters: Hall B`) or a count when 2+ are set (`Filters (3 active)`).
+
+### Internal
+- `setupVenueFilter` was renamed and generalised to `setupFilters`. Five `matches*` predicates (`matchesVenue`, `matchesType`, `matchesSpeaker`, `matchesSearch`, `matchesAll`) compose. `matchesVenue` is still used standalone for column layout; `matchesAll` for visibility.
+- Each block + mobile item now carries `data-type-id`, `data-speaker-ids` (comma-separated), and `data-search-text` (pre-lowercased UTF-8 string). Server-side pre-computation keeps the JS hot path cheap — no per-keystroke string normalisation, just a substring match against an attribute.
+- PHP collects `$type_options` and `$speaker_options` once when rendering the agenda; they sort by type name and speaker last name respectively.
+
+### Coming in 0.8.x
+- Print stylesheet (colour PDF via `@media print`)
+- Speakers shortcode polish (search, role filter, surname sort)
 
 ## [0.7.8] - 2026-05-13
 

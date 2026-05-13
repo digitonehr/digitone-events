@@ -109,6 +109,42 @@ usort( $venue_options_order, function ( $a, $b ) {
 	return strcmp( $a['sub_name'], $b['sub_name'] );
 } );
 
+// Collect unique session types used in this event.
+$type_options = []; // type_id => [ 'name' => ..., 'color' => ..., 'icon' => ... ]
+foreach ( $sessions_by_day as $day_sessions ) {
+	foreach ( $day_sessions as $s ) {
+		$tid = $s['session_type_id'] ?? '';
+		if ( ! $tid || isset( $type_options[ $tid ] ) ) continue;
+		$type_options[ $tid ] = [
+			'name'  => $s['type_name']  ?? '',
+			'color' => $s['type_color'] ?? '#6b7280',
+			'icon'  => $s['type_icon']  ?? '',
+		];
+	}
+}
+uasort( $type_options, function ( $a, $b ) { return strcasecmp( $a['name'], $b['name'] ); } );
+
+// Collect unique speakers used in this event (id => "First Last", sorted by last name).
+$speaker_options = []; // speaker_id => 'First Last'
+$speaker_sort    = []; // for usort: speaker_id => 'last first' lowercased
+foreach ( $sessions_by_day as $day_sessions ) {
+	foreach ( $day_sessions as $s ) {
+		foreach ( (array) ( $s['speakers'] ?? [] ) as $sp ) {
+			$sid = $sp['speaker_id'] ?? '';
+			if ( ! $sid || isset( $speaker_options[ $sid ] ) ) continue;
+			$first = $sp['first_name'] ?? '';
+			$last  = $sp['last_name']  ?? '';
+			$full  = trim( $first . ' ' . $last );
+			if ( $full === '' ) continue;
+			$speaker_options[ $sid ] = $full;
+			$speaker_sort[ $sid ]    = strtolower( $last . ' ' . $first );
+		}
+	}
+}
+uksort( $speaker_options, function ( $a, $b ) use ( $speaker_sort ) {
+	return strcmp( $speaker_sort[ $a ] ?? '', $speaker_sort[ $b ] ?? '' );
+} );
+
 // Initial active day defaults to first day. Browser-side JS will switch to
 // "today" if today's local date matches one of the event days. Doing this in JS
 // (not PHP) avoids server timezone and clock drift issues.
@@ -175,6 +211,48 @@ $slot_minutes = 30;
 					<span class="de-fe-filters-active" data-de-active-label></span>
 				</summary>
 				<div class="de-fe-filters-body">
+					<div class="de-fe-filter-row de-fe-filter-search">
+						<svg class="de-fe-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<circle cx="11" cy="11" r="8"></circle>
+							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+						</svg>
+						<input type="search"
+							class="de-fe-search-input"
+							data-de-filter="search"
+							placeholder="<?php esc_attr_e( 'Search sessions and speakers…', 'digitone-events' ); ?>"
+							aria-label="<?php esc_attr_e( 'Search sessions', 'digitone-events' ); ?>">
+						<button type="button" class="de-fe-search-clear" data-de-search-clear hidden aria-label="<?php esc_attr_e( 'Clear search', 'digitone-events' ); ?>">×</button>
+					</div>
+
+					<?php if ( ! empty( $type_options ) ) : ?>
+						<nav class="de-fe-type-nav" aria-label="<?php esc_attr_e( 'Filter by type', 'digitone-events' ); ?>">
+							<button type="button" class="de-fe-type-nav-item is-active" data-type="">
+								<?php esc_html_e( 'All types', 'digitone-events' ); ?>
+							</button>
+							<?php foreach ( $type_options as $tid => $topt ) :
+								$label = trim( ( $topt['icon'] ?? '' ) . ' ' . $topt['name'] );
+							?>
+								<button type="button" class="de-fe-type-nav-item"
+									data-type="<?php echo esc_attr( $tid ); ?>"
+									style="--type-color: <?php echo esc_attr( $topt['color'] ); ?>">
+									<?php echo esc_html( $label ); ?>
+								</button>
+							<?php endforeach; ?>
+						</nav>
+					<?php endif; ?>
+
+					<?php if ( ! empty( $speaker_options ) ) : ?>
+						<div class="de-fe-filter-row de-fe-filter-speaker">
+							<label class="de-fe-filter-label" for="de-fe-speaker-select"><?php esc_html_e( 'Speaker:', 'digitone-events' ); ?></label>
+							<select id="de-fe-speaker-select" class="de-fe-speaker-select" data-de-filter="speaker">
+								<option value=""><?php esc_html_e( 'All speakers', 'digitone-events' ); ?></option>
+								<?php foreach ( $speaker_options as $sid => $sname ) : ?>
+									<option value="<?php echo esc_attr( $sid ); ?>"><?php echo esc_html( $sname ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+					<?php endif; ?>
+
 					<?php if ( $multi_primary ) : ?>
 						<nav class="de-fe-primary-nav" aria-label="<?php esc_attr_e( 'Filter by venue', 'digitone-events' ); ?>">
 							<button type="button" class="de-fe-primary-nav-item is-active" data-primary="">
@@ -316,11 +394,25 @@ $slot_minutes = 30;
 								$orig_grid_col = (string) ( $hall_col[ $s['sub_venue_id'] ?? '' ] ?? 2 );
 							}
 							?>
+							<?php
+							// Build search index + speaker id list for the multi-filter logic.
+							$de_speaker_ids = [];
+							$de_search_bits = [ mb_strtolower( (string) ( $s['title'] ?? '' ), 'UTF-8' ) ];
+							foreach ( (array) ( $s['speakers'] ?? [] ) as $de_sp ) {
+								if ( ! empty( $de_sp['speaker_id'] ) ) $de_speaker_ids[] = $de_sp['speaker_id'];
+								$de_search_bits[] = mb_strtolower( trim( ( $de_sp['first_name'] ?? '' ) . ' ' . ( $de_sp['last_name'] ?? '' ) ), 'UTF-8' );
+							}
+							if ( ! empty( $s['type_name'] ) )      $de_search_bits[] = mb_strtolower( $s['type_name'], 'UTF-8' );
+							if ( ! empty( $s['sub_venue_name'] ) ) $de_search_bits[] = mb_strtolower( $s['sub_venue_name'], 'UTF-8' );
+							?>
 							<article class="de-fe-block<?php echo $is_break ? ' is-break' : ''; ?>"
 								style="<?php echo $style; ?>"
 								data-session-id="<?php echo esc_attr( $s['id'] ); ?>"
 								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
 								data-venue-id="<?php echo esc_attr( $s['venue_id'] ?? '' ); ?>"
+								data-type-id="<?php echo esc_attr( $s['session_type_id'] ?? '' ); ?>"
+								data-speaker-ids="<?php echo esc_attr( implode( ',', $de_speaker_ids ) ); ?>"
+								data-search-text="<?php echo esc_attr( implode( ' ', $de_search_bits ) ); ?>"
 								data-original-grid-column="<?php echo esc_attr( $orig_grid_col ); ?>"
 								data-start-minutes="<?php echo (int) $st; ?>"
 								data-end-minutes="<?php echo (int) $en; ?>"
@@ -379,10 +471,23 @@ $slot_minutes = 30;
 							$st_mi = $to_min( $s['start_time'] ?? null );
 							$en_mi = $to_min( $s['end_time']   ?? null );
 							?>
+							<?php
+							$mi_speaker_ids = [];
+							$mi_search_bits = [ mb_strtolower( (string) ( $s['title'] ?? '' ), 'UTF-8' ) ];
+							foreach ( (array) ( $s['speakers'] ?? [] ) as $mi_sp ) {
+								if ( ! empty( $mi_sp['speaker_id'] ) ) $mi_speaker_ids[] = $mi_sp['speaker_id'];
+								$mi_search_bits[] = mb_strtolower( trim( ( $mi_sp['first_name'] ?? '' ) . ' ' . ( $mi_sp['last_name'] ?? '' ) ), 'UTF-8' );
+							}
+							if ( ! empty( $s['type_name'] ) )      $mi_search_bits[] = mb_strtolower( $s['type_name'], 'UTF-8' );
+							if ( ! empty( $s['sub_venue_name'] ) ) $mi_search_bits[] = mb_strtolower( $s['sub_venue_name'], 'UTF-8' );
+							?>
 							<li class="de-fe-mobile-item<?php echo $is_break_mi ? ' is-break' : ''; ?>"
 								style="--type-color: <?php echo esc_attr( $type_clr ); ?>; --hall-color: <?php echo esc_attr( $hall_clr ); ?>"
 								data-sub-venue-id="<?php echo esc_attr( $s['sub_venue_id'] ?? '' ); ?>"
 								data-venue-id="<?php echo esc_attr( $s['venue_id'] ?? '' ); ?>"
+								data-type-id="<?php echo esc_attr( $s['session_type_id'] ?? '' ); ?>"
+								data-speaker-ids="<?php echo esc_attr( implode( ',', $mi_speaker_ids ) ); ?>"
+								data-search-text="<?php echo esc_attr( implode( ' ', $mi_search_bits ) ); ?>"
 								data-start-minutes="<?php echo (int) $st_mi; ?>"
 								data-end-minutes="<?php echo (int) $en_mi; ?>"
 								<?php if ( ! $is_break_mi ) : ?>
