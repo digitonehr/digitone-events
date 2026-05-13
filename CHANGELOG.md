@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-05-13
+
+### Fixed — PDF was rendering only the day headers, no content
+
+Two stacking bugs caused the v0.8.3 PDF to come out as a bare list of day-header boxes with no schedule beneath them:
+
+1. **`.de-fe-pdf-context` was on the cloned schedule, not on its wrapper.** The runtime-generated mirror rules look like `.de-fe-pdf-context .digitone-events-schedule .X`, which is a *descendant* combinator — it requires the two classes to be on **different** elements. The clone had both classes on itself, so the selector never matched and the print table stayed hidden by its base `display: none`. Class moved to the wrapper element (the absolute-positioned off-screen `<div>` that holds the clone), so the descendant chain works as written.
+
+2. **Cruft from v0.8.0 and v0.8.1 print blocks was still in the CSS.** The 0.8.2 cleanup script regex didn't match the old banner comments, so three `@media print` blocks coexisted, each declaring its own visibility toggles for grid / mobile-list / day-header. The runtime mirror scoped all three into the PDF context, where they fought each other. Removed both legacy blocks; only the 0.8.2 table-based print block remains.
+
 ## [0.8.3] - 2026-05-13
 
 ### Changed — "Export to PDF" now produces a real PDF file (no print dialog)
@@ -195,6 +205,16 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.4] - 2026-05-13
+
+### Fixed — PDF was rendering only the day headers, no content
+
+Two stacking bugs caused the v0.8.3 PDF to come out as a bare list of day-header boxes with no schedule beneath them:
+
+1. **`.de-fe-pdf-context` was on the cloned schedule, not on its wrapper.** The runtime-generated mirror rules look like `.de-fe-pdf-context .digitone-events-schedule .X`, which is a *descendant* combinator — it requires the two classes to be on **different** elements. The clone had both classes on itself, so the selector never matched and the print table stayed hidden by its base `display: none`. Class moved to the wrapper element (the absolute-positioned off-screen `<div>` that holds the clone), so the descendant chain works as written.
+
+2. **Cruft from v0.8.0 and v0.8.1 print blocks was still in the CSS.** The 0.8.2 cleanup script regex didn't match the old banner comments, so three `@media print` blocks coexisted, each declaring its own visibility toggles for grid / mobile-list / day-header. The runtime mirror scoped all three into the PDF context, where they fought each other. Removed both legacy blocks; only the 0.8.2 table-based print block remains.
 
 ## [0.8.3] - 2026-05-13
 

@@ -350,12 +350,17 @@
 
 		installPdfContextStyles();
 
-		// Off-screen render container
+		// Off-screen render container.
+		// IMPORTANT: `de-fe-pdf-context` lives HERE on the wrapper, not on the
+		// clone. The runtime-generated mirror styles are scoped as
+		//   .de-fe-pdf-context .digitone-events-schedule .X
+		// which is a descendant combinator and needs pdf-context to be on a
+		// SEPARATE ancestor element of the schedule, not the schedule itself.
 		const wrapper = document.createElement( 'div' );
+		wrapper.className = 'de-fe-pdf-context';
 		wrapper.style.cssText = 'position:absolute;left:-99999px;top:0;width:1120px;background:#fff;z-index:-1;';
 
 		const clone = schedule.cloneNode( true );
-		clone.classList.add( 'de-fe-pdf-context' );
 
 		// Strip UI chrome from the clone — buttons, filters, day-nav,
 		// session modal, screen-only grid, mobile list. The print table
