@@ -242,20 +242,22 @@
 	 * then triggers window.print(). Title is restored after.
 	 * ============================================================ */
 	/* ============================================================
-	 * Export to PDF — client-side PDF generation (v0.8.5).
+	 * Export to PDF — client-side PDF generation (v0.8.6).
 	 *
-	 * Architecture:
-	 *   - html2pdf.js (jsPDF + html2canvas, ~150 KB) is lazy-loaded
-	 *     from cdnjs on first click.
-	 *   - The .de-fe-print-table styling lives outside @media print
-	 *     (since v0.8.5), so the cells render correctly even when
-	 *     html2canvas captures the DOM (no print context).
-	 *   - We pass the LIVE schedule element to html2pdf and use
-	 *     html2canvas's `onclone` callback to mutate the cloned DOM
-	 *     (visible only to the rasterizer): hide screen-only widgets,
-	 *     force every day visible, and flip the print tables to
-	 *     display:table. The user's live page is never touched, so
-	 *     there's no flicker.
+	 * html2pdf.js uses html2canvas internally for its own pagebreak
+	 * handling, and that overrides any `onclone` we pass through, so
+	 * we can't rely on it. Instead we clone the schedule directly,
+	 * mutate the clone in our own off-screen wrapper, and hand the
+	 * already-prepared clone to html2pdf. The user's live page is
+	 * never touched — wrapper sits at left:-99999px the whole time.
+	 *
+	 * Works because v0.8.5 moved the `.de-fe-print-*` styling rules
+	 * out of @media print to global scope: html2canvas can read them
+	 * via the normal cascade, without any print-context magic.
+	 *
+	 * Filters on screen don't affect the PDF — the print tables are
+	 * server-rendered from the full event data and contain every
+	 * session regardless of UI filter state.
 	 * ============================================================ */
 	const HTML2PDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
 
@@ -300,75 +302,95 @@
 		} );
 	}
 
-	/* Mutate the cloned DOM that html2canvas is about to rasterize.
-	 * This is run by html2canvas on its internal iframe — the user's
-	 * live page is untouched, so there's no flicker. */
-	function preparePdfClone( clonedSchedule ) {
-		if ( ! clonedSchedule ) return;
-
-		// Hide every on-screen widget that has no place in the PDF.
-		clonedSchedule.querySelectorAll(
-			'.de-fe-day-nav, .de-fe-filters, .de-fe-header-actions, ' +
-			'.de-fe-session-modal, .de-fe-schedule-grid, .de-fe-mobile-list'
-		).forEach( function ( el ) {
-			el.style.setProperty( 'display', 'none', 'important' );
-		} );
-
-		// Force every day visible (on-screen, only one .is-active at a time).
-		clonedSchedule.querySelectorAll( '.de-fe-schedule-day' ).forEach( function ( day ) {
-			day.classList.add( 'is-active' );
-			day.setAttribute( 'aria-hidden', 'false' );
-			day.style.setProperty( 'display', 'block', 'important' );
-		} );
-
-		// Show the print tables (baseline rule is display:none).
-		clonedSchedule.querySelectorAll( '.de-fe-print-table' ).forEach( function ( t ) {
-			t.style.setProperty( 'display', 'table', 'important' );
-			t.style.setProperty( 'width', '100%', 'important' );
-		} );
-	}
-
 	async function generatePdf( schedule, eventName ) {
 		await loadScriptOnce( HTML2PDF_CDN );
 		if ( typeof window.html2pdf !== 'function' ) {
 			throw new Error( 'html2pdf.js failed to load' );
 		}
 
-		await window.html2pdf().set( {
-			margin:    [ 8, 8, 10, 8 ],
-			filename:  eventName + ' — Programme.pdf',
-			image:     { type: 'jpeg', quality: 0.95 },
-			html2canvas: {
-				scale:           2,
-				useCORS:         true,
-				backgroundColor: '#ffffff',
-				letterRendering: true,
-				logging:         false,
-				/* The clonedDoc is a clone of the WHOLE document; the second
-				 * arg is the cloned target element (the schedule). We mutate
-				 * it in-place — only the rasterizer sees these changes. */
-				onclone: function ( clonedDoc, clonedEl ) {
-					try {
-						const target = clonedEl
-							|| clonedDoc.querySelector( '.digitone-events-schedule' );
-						preparePdfClone( target );
-					} catch ( e ) {
-						// eslint-disable-next-line no-console
-						console.warn( '[digitone-events] onclone failed:', e );
-					}
-				}
-			},
-			jsPDF: {
-				unit:        'mm',
-				format:      'a4',
-				orientation: 'landscape',
-				compress:    true
-			},
-			pagebreak: {
-				mode:  [ 'css', 'legacy' ],
-				avoid: [ '.de-fe-print-td-session', '.de-fe-print-td-break', '.de-fe-day-header', 'tr' ]
+		// Fixed-positioned off-screen wrapper. Width matches a typical
+		// rendering viewport so the schedule's responsive CSS picks the
+		// desktop branch (multi-column grid would be irrelevant here,
+		// but the print-table sizing needs ~1100 px to look right).
+		const wrapper = document.createElement( 'div' );
+		wrapper.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;z-index:-1;';
+
+		const clone = schedule.cloneNode( true );
+
+		// 1) Strip every on-screen widget that has no place in the PDF.
+		//    `.de-fe-header-actions` is what holds the "Add to calendar"
+		//    and "Export to PDF" buttons, including the spinner state.
+		clone.querySelectorAll(
+			'.de-fe-day-nav, .de-fe-filters, .de-fe-header-actions, ' +
+			'.de-fe-session-modal, .de-fe-schedule-grid, .de-fe-mobile-list, script'
+		).forEach( function ( el ) { el.remove(); } );
+
+		// 2) Force every day visible (on screen only one carries `.is-active`)
+		//    and mark days 2..N so the pagebreak engine starts each on a fresh
+		//    page. Day 1 stays unmarked so the document doesn't start with a
+		//    blank page.
+		clone.querySelectorAll( '.de-fe-schedule-day' ).forEach( function ( day, idx ) {
+			day.classList.add( 'is-active' );
+			day.setAttribute( 'aria-hidden', 'false' );
+			day.style.setProperty( 'display', 'block', 'important' );
+			if ( idx > 0 ) {
+				day.classList.add( 'de-fe-pdf-page-break' );
+				day.style.pageBreakBefore = 'always';
+				day.style.breakBefore = 'page';
 			}
-		} ).from( schedule ).save();
+		} );
+
+		// 3) Reveal the server-rendered print tables (base CSS hides them
+		//    with display:none). With the v0.8.5 refactor their styling is
+		//    global, so once display flips to `table` they render correctly.
+		clone.querySelectorAll( '.de-fe-print-table' ).forEach( function ( t ) {
+			t.style.setProperty( 'display', 'table', 'important' );
+		} );
+
+		wrapper.appendChild( clone );
+		document.body.appendChild( wrapper );
+
+		// Let the layout engine settle the styles + sizes before capture.
+		await new Promise( function ( r ) { setTimeout( r, 200 ); } );
+
+		try {
+			await window.html2pdf().set( {
+				margin:    [ 8, 8, 10, 8 ],
+				filename:  eventName + ' — Programme.pdf',
+				image:     { type: 'jpeg', quality: 0.95 },
+				html2canvas: {
+					scale:           2,
+					useCORS:         true,
+					backgroundColor: '#ffffff',
+					letterRendering: true,
+					logging:         false
+				},
+				jsPDF: {
+					unit:        'mm',
+					format:      'a4',
+					orientation: 'landscape',
+					compress:    true
+				},
+				pagebreak: {
+					/* `before` forces a new page at every Day 2..N.
+					 * `avoid` tells the slicer not to cut these elements
+					 * in the middle — sessions, breaks, day headers, and
+					 * any individual <tr> stay whole unless taller than
+					 * one full page (in which case splitting is the only
+					 * physically possible outcome). */
+					mode:   [ 'css', 'legacy' ],
+					before: '.de-fe-pdf-page-break',
+					avoid:  [
+						'.de-fe-print-td-session',
+						'.de-fe-print-td-break',
+						'.de-fe-day-header',
+						'tr'
+					]
+				}
+			} ).from( clone ).save();
+		} finally {
+			wrapper.remove();
+		}
 	}
 
 	function setupFilters( schedule ) {

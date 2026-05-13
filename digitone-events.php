@@ -3,7 +3,7 @@
  * Plugin Name:       DigitOne Events
  * Plugin URI:        https://github.com/digitonehr/digitone-events
  * Description:       Conference & event management with multi-event backend, sessions, speakers, venues, days, and frontend shortcodes. Modular, secure, GitHub auto-update.
- * Version:           0.8.5
+ * Version:           0.8.6
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            DIGIT
@@ -23,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
  * Plugin constants
  * ------------------------------------------------------------------------ */
 
-define( 'DIGITONE_EVENTS_VERSION', '0.8.5' );
+define( 'DIGITONE_EVENTS_VERSION', '0.8.6' );
 define( 'DIGITONE_EVENTS_FILE', __FILE__ );
 define( 'DIGITONE_EVENTS_BASENAME', plugin_basename( __FILE__ ) );
 define( 'DIGITONE_EVENTS_SLUG', 'digitone-events' );

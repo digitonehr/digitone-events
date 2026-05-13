@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-05-13
+
+### Fixed — PDF was rendering only the active day plus the live UI chrome
+
+The v0.8.5 attempt relied on `html2canvas`'s `onclone` callback to swap the on-screen widgets for the print tables. That callback never ran (or ran but its mutations were discarded) because **html2pdf.js installs its own internal `onclone` for its pagebreak handling, which clobbers the user-supplied one**. Symptoms: only the currently-active day appeared in the PDF, the screen day-nav was still visible, and the "Generating PDF…" button got captured mid-spin.
+
+The new flow drops `onclone` entirely:
+
+1. **Clone the schedule into a fixed-position off-screen wrapper** at `left: -99999px`. The user's live page never moves.
+2. **Mutate the clone before handing it to html2pdf**: strip `.de-fe-day-nav`, `.de-fe-filters`, `.de-fe-header-actions`, `.de-fe-session-modal`, `.de-fe-schedule-grid`, `.de-fe-mobile-list`, and any inline `<script>`. The "Add to calendar" / "Export to PDF" buttons live inside `.de-fe-header-actions` so they go with that.
+3. **Force every `.de-fe-schedule-day` visible** (on screen only one carries `.is-active`, so without this step only the currently-selected day would render). Days 2..N additionally receive the `.de-fe-pdf-page-break` class and inline `page-break-before: always` so each starts on a fresh PDF page. Day 1 stays unmarked so the document doesn't open with a blank page.
+4. **Flip the print tables to `display: table`** so the server-rendered tables become visible. Their styling already lives globally (since v0.8.5), so the cells, colors, fonts, and rowspans all render correctly through the normal cascade.
+5. **Pass the prepared clone to `html2pdf().from(clone)`**. Filter state on the live page doesn't matter — the print tables are server-rendered from the full event and contain every session regardless of the screen filter.
+
+### Page-break behaviour
+- `pagebreak.before: '.de-fe-pdf-page-break'` puts each new day on its own page.
+- `pagebreak.avoid: ['.de-fe-print-td-session', '.de-fe-print-td-break', '.de-fe-day-header', 'tr']` tells the slicer not to cut sessions, breaks, day headers, or individual table rows. The slicer can still split an element if it's literally taller than one A4-landscape page (e.g. a workshop spanning 9 half-hour slots could exceed the page height), which is the "schedule-defined" exception you asked for.
+
 ## [0.8.5] - 2026-05-13
 
 ### Fixed — PDF now actually contains the schedule, not just day headers
@@ -220,6 +238,24 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.6] - 2026-05-13
+
+### Fixed — PDF was rendering only the active day plus the live UI chrome
+
+The v0.8.5 attempt relied on `html2canvas`'s `onclone` callback to swap the on-screen widgets for the print tables. That callback never ran (or ran but its mutations were discarded) because **html2pdf.js installs its own internal `onclone` for its pagebreak handling, which clobbers the user-supplied one**. Symptoms: only the currently-active day appeared in the PDF, the screen day-nav was still visible, and the "Generating PDF…" button got captured mid-spin.
+
+The new flow drops `onclone` entirely:
+
+1. **Clone the schedule into a fixed-position off-screen wrapper** at `left: -99999px`. The user's live page never moves.
+2. **Mutate the clone before handing it to html2pdf**: strip `.de-fe-day-nav`, `.de-fe-filters`, `.de-fe-header-actions`, `.de-fe-session-modal`, `.de-fe-schedule-grid`, `.de-fe-mobile-list`, and any inline `<script>`. The "Add to calendar" / "Export to PDF" buttons live inside `.de-fe-header-actions` so they go with that.
+3. **Force every `.de-fe-schedule-day` visible** (on screen only one carries `.is-active`, so without this step only the currently-selected day would render). Days 2..N additionally receive the `.de-fe-pdf-page-break` class and inline `page-break-before: always` so each starts on a fresh PDF page. Day 1 stays unmarked so the document doesn't open with a blank page.
+4. **Flip the print tables to `display: table`** so the server-rendered tables become visible. Their styling already lives globally (since v0.8.5), so the cells, colors, fonts, and rowspans all render correctly through the normal cascade.
+5. **Pass the prepared clone to `html2pdf().from(clone)`**. Filter state on the live page doesn't matter — the print tables are server-rendered from the full event and contain every session regardless of the screen filter.
+
+### Page-break behaviour
+- `pagebreak.before: '.de-fe-pdf-page-break'` puts each new day on its own page.
+- `pagebreak.avoid: ['.de-fe-print-td-session', '.de-fe-print-td-break', '.de-fe-day-header', 'tr']` tells the slicer not to cut sessions, breaks, day headers, or individual table rows. The slicer can still split an element if it's literally taller than one A4-landscape page (e.g. a workshop spanning 9 half-hour slots could exceed the page height), which is the "schedule-defined" exception you asked for.
 
 ## [0.8.5] - 2026-05-13
 
