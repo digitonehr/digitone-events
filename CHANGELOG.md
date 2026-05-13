@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-05-12
+
+### Fixed
+- **"Update available" banner now disappears immediately after a successful upgrade.** Added a self-cleaning step to `inject_update`: if the GitHub release is `<=` our installed version, we now *actively unset* any stale entry from `$transient->response`. Previously we returned the transient unmodified, so a stale entry from before the upgrade kept showing the banner until WP's own 12-hour refresh cycle expired.
+- **"Update now" button (Settings → Force Check)** is now built with `document.createElement` instead of an `innerHTML` string interpolation. The `href` is assigned via the DOM property, so the URL's literal `&` is preserved end-to-end (no HTML escaping at all). Even if a future change accidentally reintroduces `wp_nonce_url`, the JS-side is now bug-proof.
+- **`.de-fe-schedule-day` display rules are `!important`** so heavy-handed themes that target `section` or generic block selectors can't accidentally force hidden panels to be visible.
+- **Defensive day-picker reset on initial render**: `show(idx)` now wipes `is-active` from every panel + button first, then sets only the chosen one. Belt-and-suspenders against any stale state from partial updates.
+
+### How to deploy this cleanly (one-time housekeeping)
+The single-update version-key bug (`'plugin'` vs `'plugins'` in `$hook_extra`) wasn't fixed until 0.5.8. If you're on 0.5.7 right now and the **Settings → Update Now button** gives "Link has expired", that's the 0.5.7 `wp_nonce_url` double-escape bug — don't use that button yet. Instead:
+
+1. Go to **Plugins** (left WP menu), find DigitOne Events
+2. Click **update now** in the yellow banner under the plugin row
+3. The banner may reappear once — that's the 0.5.7 single-update bug. Click **update now** a second time; it'll clear.
+4. Once you're on 0.5.9, the Settings → Force Check + Update Now button works correctly, and subsequent upgrades will take one click.
+
 ## [0.5.8] - 2026-05-12
 
 ### Fixed

@@ -172,6 +172,12 @@ final class DigitOne_Events_Github_Updater {
 		}
 
 		if ( version_compare( $release['version'], DIGITONE_EVENTS_VERSION, '<=' ) ) {
+			// Belt-and-suspenders: actively remove any stale entry from a previous
+			// run where we were outdated. Without this, the WP transient can keep
+			// showing "Update available" pointing at our own current version.
+			if ( isset( $transient->response[ DIGITONE_EVENTS_BASENAME ] ) ) {
+				unset( $transient->response[ DIGITONE_EVENTS_BASENAME ] );
+			}
 			return $transient;
 		}
 

@@ -166,11 +166,11 @@
 /* DAY PANELS — hide all except .is-active                      */
 /* ============================================================ */
 .de-fe-schedule-day {
-	display: none;
+	display: none !important;
 	margin-bottom: 0;
 }
 .de-fe-schedule-day.is-active {
-	display: block;
+	display: block !important;
 }
 
 .de-fe-day-header {

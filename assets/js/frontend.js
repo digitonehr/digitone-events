@@ -5,10 +5,8 @@
  *   1. URL ?de-day=N or #de-day-N
  *   2. Otherwise: Day 1 (always)
  *
- * Document title:
- *   Set to "<event-name> <suffix>" (default suffix = "Programme") from
- *   data-event-name and data-title-suffix attributes on the schedule wrapper.
- *   Empty suffix disables the title swap.
+ * Defensively forces a clean active state regardless of any is-active classes
+ * that may have leaked through stale HTML or partial updates.
  */
 ( function () {
 	'use strict';
@@ -19,16 +17,24 @@
 		if ( ! buttons.length || ! panels.length ) return;
 
 		function show( idx ) {
-			buttons.forEach( function ( b, i ) {
-				const active = ( i === idx );
-				b.classList.toggle( 'is-active', active );
-				b.setAttribute( 'aria-selected', active ? 'true' : 'false' );
+			// First wipe everything, then apply — defensive against duplicates.
+			panels.forEach( function ( p ) {
+				p.classList.remove( 'is-active' );
+				p.setAttribute( 'aria-hidden', 'true' );
 			} );
-			panels.forEach( function ( p, i ) {
-				const active = ( i === idx );
-				p.classList.toggle( 'is-active', active );
-				p.setAttribute( 'aria-hidden', active ? 'false' : 'true' );
+			buttons.forEach( function ( b ) {
+				b.classList.remove( 'is-active' );
+				b.setAttribute( 'aria-selected', 'false' );
 			} );
+
+			if ( panels[ idx ] ) {
+				panels[ idx ].classList.add( 'is-active' );
+				panels[ idx ].setAttribute( 'aria-hidden', 'false' );
+			}
+			if ( buttons[ idx ] ) {
+				buttons[ idx ].classList.add( 'is-active' );
+				buttons[ idx ].setAttribute( 'aria-selected', 'true' );
+			}
 		}
 
 		buttons.forEach( function ( btn, idx ) {
@@ -38,7 +44,7 @@
 			} );
 		} );
 
-		// Initial selection. Default = Day 1.
+		// Initial selection. Always default to Day 1 (index 0).
 		let selectedIdx = 0;
 		try {
 			const url = new URL( window.location.href );
@@ -54,15 +60,12 @@
 			}
 		} catch ( e ) { /* stay on 0 */ }
 
-		// Always apply final selection — overrides any stale HTML state.
 		show( selectedIdx );
 	}
 
 	function swapTitle( schedule ) {
 		const eventName = schedule.getAttribute( 'data-event-name' );
 		if ( ! eventName ) return;
-		// title-suffix attribute lets the shortcode customise or disable the swap.
-		// Missing attribute → default "Programme". Empty string → don't swap.
 		let suffix = schedule.getAttribute( 'data-title-suffix' );
 		if ( suffix === null ) suffix = 'Programme';
 		if ( suffix === '' ) return;

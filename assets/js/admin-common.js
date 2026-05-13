@@ -96,15 +96,31 @@
 
 			DE.api( 'digitone_events_check_update', {} )
 				.then( function ( data ) {
+					out.innerHTML = '';
 					if ( data.is_newer ) {
 						out.className = 'de-check-result is-success';
-						let html = '🆕 v' + escapeHtml( data.latest ) +
-							' available (installed v' + escapeHtml( data.installed ) + '). ';
+
+						// Use createTextNode + createElement so the update URL's literal "&"
+						// is preserved through the .href property (no HTML escaping at all).
+						out.appendChild( document.createTextNode( '🆕 v' + data.latest + ' available (installed v' + data.installed + '). ' ) );
+
 						if ( data.update_url ) {
-							html += '<a class="button button-primary de-update-now" href="' + escapeHtml( data.update_url ) + '">Update now</a> ';
+							const a = document.createElement( 'a' );
+							a.className   = 'button button-primary de-update-now';
+							a.href        = data.update_url;
+							a.textContent = 'Update now';
+							out.appendChild( a );
+							out.appendChild( document.createTextNode( ' ' ) );
 						}
-						html += '<a href="' + escapeHtml( data.html_url ) + '" target="_blank" rel="noopener">View release</a>';
-						out.innerHTML = html;
+
+						if ( data.html_url ) {
+							const a = document.createElement( 'a' );
+							a.href      = data.html_url;
+							a.target    = '_blank';
+							a.rel       = 'noopener';
+							a.textContent = 'View release';
+							out.appendChild( a );
+						}
 					} else {
 						out.className = 'de-check-result is-warning';
 						out.textContent = '✓ You are on the latest version (v' + data.installed + ').';
