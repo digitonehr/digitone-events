@@ -50,6 +50,7 @@
 
 		let lastPayload = null;
 		let lastSchema  = null;
+		let lastReport  = null;
 
 		if ( fileInput && previewBtn ) {
 			fileInput.addEventListener( 'change', function () {
@@ -66,7 +67,69 @@
 			if ( action === 'excel-preview' )           { ev.preventDefault(); runPreview(); }
 			if ( action === 'excel-cancel' )            { ev.preventDefault(); resetUi(); }
 			if ( action === 'excel-commit' )            { ev.preventDefault(); runCommit(); }
+			if ( action === 'excel-danger-cancel' )     { ev.preventDefault(); closeDangerDialog(); }
+			if ( action === 'excel-danger-proceed' )    { ev.preventDefault(); runCommitNow(); }
 		} );
+
+		/* Style the active mode pill + toggle label class.
+		 * Selecting "Full overwrite" doesn't trigger anything destructive
+		 * by itself — the warning + backup gate only appears at commit. */
+		const modeRadios = panel.querySelectorAll( 'input[name="de-excel-mode"]' );
+		const modeLabels = panel.querySelectorAll( '.de-excel-mode-option' );
+		modeRadios.forEach( function ( r ) {
+			r.addEventListener( 'change', function () {
+				modeLabels.forEach( function ( lbl ) {
+					lbl.classList.toggle( 'is-active', lbl.contains( r ) && r.checked );
+				} );
+				// Re-run preview if we already have one — counts change between modes.
+				if ( lastPayload && ! result.hidden ) runPreview();
+			} );
+		} );
+
+		/* Danger dialog wiring */
+		const dangerDialog   = panel.querySelector( '[data-de-excel-danger]' );
+		const dangerList     = panel.querySelector( '[data-de-danger-list]' );
+		const dangerCheckbox = panel.querySelector( '[data-de-danger-checkbox]' );
+		const dangerProceed  = panel.querySelector( '[data-de-action="excel-danger-proceed"]' );
+		if ( dangerCheckbox && dangerProceed ) {
+			dangerCheckbox.addEventListener( 'change', function () {
+				dangerProceed.disabled = ! dangerCheckbox.checked;
+			} );
+		}
+		function openDangerDialog( report ) {
+			if ( ! dangerDialog ) return;
+			// Populate the "will delete" summary list from the report
+			if ( dangerList ) {
+				dangerList.innerHTML = '';
+				const results = report.results || {};
+				Object.keys( results ).forEach( function ( ek ) {
+					const r = results[ ek ];
+					if ( ! r.deleted ) return;
+					const li = document.createElement( 'li' );
+					li.innerHTML = '<strong>' + r.deleted + '</strong> ' + escapeHtml( ( r.sheet || ek ).toLowerCase() ) + ' will be deleted';
+					dangerList.appendChild( li );
+				} );
+				if ( ! dangerList.children.length ) {
+					const li = document.createElement( 'li' );
+					li.textContent = '(no existing data — workbook will be inserted as-is)';
+					dangerList.appendChild( li );
+				}
+			}
+			if ( dangerCheckbox ) dangerCheckbox.checked = false;
+			if ( dangerProceed )  dangerProceed.disabled = true;
+			if ( typeof dangerDialog.showModal === 'function' ) dangerDialog.showModal();
+			else dangerDialog.setAttribute( 'open', '' );
+		}
+		function closeDangerDialog() {
+			if ( ! dangerDialog ) return;
+			if ( typeof dangerDialog.close === 'function' ) dangerDialog.close();
+			else dangerDialog.removeAttribute( 'open' );
+		}
+
+		function currentMode() {
+			const checked = panel.querySelector( 'input[name="de-excel-mode"]:checked' );
+			return checked ? checked.value : 'incremental';
+		}
 
 		function resetUi() {
 			result.hidden = true;
@@ -160,7 +223,7 @@
 
 				const res = await DE.api( 'digitone_events_excel_preview', {
 					event_id: activeEvent,
-					mode:     'incremental',
+					mode:     currentMode(),
 					payload:  JSON.stringify( payload ),
 				} );
 
@@ -174,23 +237,40 @@
 			}
 		}
 
-		/* ---- Commit ---- */
+		/* ---- Commit ----
+		 * Incremental: just send. Full: open the danger dialog first,
+		 * user has to download a backup (or tick the "I have one" box)
+		 * before "Replace everything" enables. runCommitNow is the
+		 * actual send, shared by both paths. */
 
 		function runCommit() {
 			if ( ! lastPayload ) { DE.feedback( 'Run preview first.', 'error' ); return; }
+			if ( currentMode() === 'full' ) {
+				openDangerDialog( lastReport || { results: {} } );
+				return;
+			}
+			runCommitNow();
+		}
+
+		function runCommitNow() {
+			if ( ! lastPayload ) return;
+			closeDangerDialog();
 			commitBtn.disabled = true;
 			commitBtn.textContent = 'Importing…';
 
 			DE.api( 'digitone_events_excel_commit', {
 				event_id: activeEvent,
-				mode:     'incremental',
+				mode:     currentMode(),
 				payload:  JSON.stringify( lastPayload ),
 			} )
 				.then( function ( res ) {
-					DE.feedback(
-						'Imported ' + res.totals.inserted + ', skipped ' + res.totals.skipped + ', errors ' + res.totals.errors + '.',
-						res.totals.errors > 0 ? 'info' : 'success'
-					);
+					const t = res.totals || {};
+					const parts = [];
+					if ( t.deleted )  parts.push( 'deleted ' + t.deleted );
+					parts.push( 'imported ' + ( t.inserted || 0 ) );
+					if ( t.skipped )  parts.push( 'skipped ' + t.skipped );
+					if ( t.errors )   parts.push( 'errors ' + t.errors );
+					DE.feedback( parts.join( ', ' ) + '.', t.errors > 0 ? 'info' : 'success' );
 					setTimeout( function () { window.location.reload(); }, 800 );
 				} )
 				.catch( function ( err ) {
@@ -273,19 +353,32 @@
 		/* ---- Render preview report ---- */
 
 		function renderReport( res, warnings ) {
+			lastReport = res;
+			const isFull = ( res.mode === 'full' );
+
 			result.hidden = false;
 			rowsEl.innerHTML = '';
 			errorsBody.innerHTML = '';
 
-			const totals = res.totals || { inserted: 0, skipped: 0, errors: 0 };
+			// Toggle the "Will delete" header column based on mode.
+			const deleteHeader = panel.querySelector( '.de-excel-col-delete' );
+			if ( deleteHeader ) deleteHeader.hidden = ! isFull;
+
+			const totals = res.totals || { inserted: 0, skipped: 0, errors: 0, deleted: 0 };
 			let cls = 'notice notice-success';
 			if ( totals.errors > 0 )       cls = 'notice notice-warning';
 			if ( totals.inserted === 0 && totals.errors > 0 ) cls = 'notice notice-error';
+			if ( isFull )                   cls = 'notice notice-warning';
 
-			let html = '<div class="' + cls + ' inline" style="padding:10px;margin:0 0 12px">' +
-				'<p style="margin:0"><strong>' + totals.inserted + '</strong> will be inserted, ' +
-				'<strong>' + totals.skipped + '</strong> will be skipped (already exist), ' +
-				'<strong>' + totals.errors + '</strong> errors.</p></div>';
+			let summary = '<strong>' + totals.inserted + '</strong> will be inserted';
+			if ( isFull ) {
+				summary += ', <strong>' + ( totals.deleted || 0 ) + '</strong> existing rows will be deleted';
+			} else {
+				summary += ', <strong>' + totals.skipped + '</strong> will be skipped (already exist)';
+			}
+			summary += ', <strong>' + totals.errors + '</strong> errors.';
+
+			let html = '<div class="' + cls + ' inline" style="padding:10px;margin:0 0 12px"><p style="margin:0">' + summary + '</p></div>';
 			if ( warnings && warnings.length ) {
 				html += '<div class="notice notice-warning inline" style="padding:8px 10px;margin:0 0 12px"><p style="margin:0;font-size:12px">' +
 					warnings.map( escapeHtml ).join( '<br>' ) + '</p></div>';
@@ -295,12 +388,15 @@
 			const results = res.results || {};
 			Object.keys( results ).forEach( function ( ek ) {
 				const r = results[ ek ];
-				const tr = document.createElement( 'tr' );
-				tr.innerHTML =
-					'<td>' + escapeHtml( r.sheet || ek ) + '</td>' +
-					'<td class="de-col-num">' + r.inserted + '</td>' +
-					'<td class="de-col-num">' + r.skipped + '</td>' +
+				let row = '<td>' + escapeHtml( r.sheet || ek ) + '</td>';
+				if ( isFull ) {
+					row += '<td class="de-col-num">' + ( r.deleted || 0 ) + '</td>';
+				}
+				row += '<td class="de-col-num">' + ( r.inserted || 0 ) + '</td>' +
+					'<td class="de-col-num">' + ( r.skipped || 0 ) + '</td>' +
 					'<td class="de-col-num">' + ( r.errors ? r.errors.length : 0 ) + '</td>';
+				const tr = document.createElement( 'tr' );
+				tr.innerHTML = row;
 				rowsEl.appendChild( tr );
 
 				( r.errors || [] ).forEach( function ( e ) {
@@ -316,8 +412,9 @@
 			errorsWrap.hidden = errorsBody.children.length === 0;
 
 			if ( commitBtn ) {
-				commitBtn.disabled = totals.inserted === 0;
-				commitBtn.textContent = 'Confirm import';
+				commitBtn.disabled = ( totals.inserted === 0 && ! isFull );
+				commitBtn.textContent = isFull ? 'Replace event data…' : 'Confirm import';
+				commitBtn.classList.toggle( 'button-danger', isFull );
 			}
 
 			result.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );

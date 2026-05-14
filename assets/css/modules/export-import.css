@@ -121,3 +121,128 @@
 .de-excel-errors h4 {
 	margin: 0 0 6px;
 }
+
+/* Mode toggle (0.9.4) */
+.de-excel-mode {
+	display: flex;
+	gap: 8px;
+	margin: 8px 0 12px;
+	padding: 0;
+	border: 0;
+}
+.de-excel-mode-option {
+	flex: 1 1 0;
+	padding: 10px 12px;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	background: #f6f7f7;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	transition: border-color 0.15s, background 0.15s;
+}
+.de-excel-mode-option input[type="radio"] {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+.de-excel-mode-option:hover {
+	border-color: #2271b1;
+}
+.de-excel-mode-option.is-active {
+	background: #fff;
+	border-color: #2271b1;
+	box-shadow: inset 0 0 0 1px #2271b1;
+}
+.de-excel-mode-option.de-excel-mode-danger.is-active {
+	border-color: #b32d2e;
+	box-shadow: inset 0 0 0 1px #b32d2e;
+}
+.de-excel-mode-title {
+	font-weight: 600;
+	font-size: 13px;
+}
+.de-excel-mode-desc {
+	font-size: 12px;
+	color: #50575e;
+	line-height: 1.4;
+}
+
+/* Danger dialog (full-mode confirmation) */
+.de-excel-danger-dialog {
+	width: 540px;
+	max-width: 92vw;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+.de-excel-danger-dialog::backdrop {
+	background: rgba(0,0,0,0.4);
+}
+.de-excel-danger-header {
+	padding: 16px 20px;
+	background: #b32d2e;
+	color: #fff;
+	border-radius: 6px 6px 0 0;
+}
+.de-excel-danger-header h3 {
+	margin: 0;
+	font-size: 16px;
+	color: #fff;
+}
+.de-excel-danger-body {
+	padding: 20px;
+}
+.de-excel-danger-body p {
+	margin: 0 0 12px;
+}
+.de-excel-danger-list {
+	margin: 0 0 12px 20px;
+	padding: 0;
+	font-size: 13px;
+	color: #50575e;
+}
+.de-excel-danger-list li {
+	list-style: disc;
+	margin-bottom: 2px;
+}
+.de-excel-danger-irreversible {
+	padding: 8px 10px;
+	background: #fcf0f1;
+	border-left: 3px solid #b32d2e;
+	font-size: 13px;
+}
+.de-excel-danger-confirm {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	margin-top: 12px;
+	background: #f6f7f7;
+	border-radius: 4px;
+	font-size: 13px;
+	cursor: pointer;
+}
+.de-excel-danger-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 12px 20px;
+	border-top: 1px solid #dcdcde;
+	background: #f6f7f7;
+	border-radius: 0 0 6px 6px;
+}
+.button.button-danger {
+	background: #b32d2e !important;
+	border-color: #882424 !important;
+	color: #fff !important;
+}
+.button.button-danger:hover {
+	background: #882424 !important;
+}
+.button.button-danger:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}

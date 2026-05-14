@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-05-14
+
+### Added — Excel Full overwrite mode + JSON backup integration
+
+The 0.9.0 release shipped Excel import in incremental mode only — rows that already existed (matched by natural key) got skipped. This release fills in the other half of the promise: a **Full overwrite** mode that wipes every existing row of the entity types in the workbook before inserting from it. Useful when an event's data has drifted from the master spreadsheet and the cleanest fix is "throw it all away, re-import from scratch."
+
+#### UI flow
+A new **mode selector** sits inside the upload column with two radio cards:
+
+- **Incremental** (default) — what 0.9.x has been doing. Safe to re-run any number of times; only inserts what's new.
+- **Full overwrite** — danger styling, destructive. Insertion happens after a clean wipe.
+
+The Preview table gains a **"Will delete"** column when full mode is selected. Counts come from the same `run( $payload, $event_id, $mode, dry_run=true )` call the incremental mode uses — single source of truth.
+
+The big change is the **danger dialog** in front of the actual commit. When the user is in full mode and clicks "Replace event data…":
+
+1. A red-bordered `<dialog>` opens listing exactly what will be deleted ("57 sessions will be deleted", "159 speakers will be deleted", …) pulled from the preview totals.
+2. A prominent **"Download JSON backup"** button (using the existing `admin-post.php?action=digitone_events_export&format=json&event_id=…` nonce-protected URL) opens the JSON export in a new tab. JSON-format event snapshots are round-trippable via the existing Import-as-new-event panel, so the user has a real safety net.
+3. An "I have a backup and understand this cannot be undone." checkbox below; the **"Replace everything"** button stays disabled until it's ticked.
+4. Only when both conditions are met does the commit fire.
+
+Switching from "Full overwrite" back to "Incremental" with a preview already on screen re-runs the preview automatically so the displayed numbers stay honest.
+
+#### Internal
+- `DigitOne_Events_Export_Import_Excel::run()` was extended with two helpers:
+  - `count_existing( $entity_key, $event_id )` — used in dry-run + full mode so the preview shows accurate "will delete" totals before any DB write happens.
+  - `wipe_entity( $entity_key, $event_id )` — used in commit + full mode. Iterates and calls each repo's `delete()` (which handles its own junction-table cleanup, so we don't need raw SQL). Called in **reverse** of `IMPORT_ORDER`: sessions first (because everything references them), titles last (because nothing references titles).
+- `prime_caches()` now takes a `$mode` argument. In full mode it returns empty buckets (no `by_nk` pre-population, no `next_order` / `color_idx` from existing rows) so the import behaves as if the slate were already wiped. That means the same code path produces correct results for both dry-run-on-full-mode (cache empty, no dedup happens, FK lookups grow as imports happen) and commit-on-full-mode (DB really is empty, same behaviour).
+- `import_entity()` already skipped dedup in non-incremental modes; no changes there.
+- AJAX `excel_preview` / `excel_commit` lost the "Full mode is not yet enabled" guard from 0.9.0 and now pass mode through directly.
+
+### Note
+The danger dialog uses the native `<dialog>` element. Modern browsers (Chrome/Firefox/Safari/Edge 2022+) support it natively; the fallback `setAttribute('open', '')` keeps it functional for older builds but without the proper modal backdrop. WP admin is already a modern-browser-only environment so this is a non-issue in practice.
+
 ## [0.9.3] - 2026-05-14
 
 ### Added — Now / Next widget on the agenda
@@ -407,6 +441,40 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.9.4] - 2026-05-14
+
+### Added — Excel Full overwrite mode + JSON backup integration
+
+The 0.9.0 release shipped Excel import in incremental mode only — rows that already existed (matched by natural key) got skipped. This release fills in the other half of the promise: a **Full overwrite** mode that wipes every existing row of the entity types in the workbook before inserting from it. Useful when an event's data has drifted from the master spreadsheet and the cleanest fix is "throw it all away, re-import from scratch."
+
+#### UI flow
+A new **mode selector** sits inside the upload column with two radio cards:
+
+- **Incremental** (default) — what 0.9.x has been doing. Safe to re-run any number of times; only inserts what's new.
+- **Full overwrite** — danger styling, destructive. Insertion happens after a clean wipe.
+
+The Preview table gains a **"Will delete"** column when full mode is selected. Counts come from the same `run( $payload, $event_id, $mode, dry_run=true )` call the incremental mode uses — single source of truth.
+
+The big change is the **danger dialog** in front of the actual commit. When the user is in full mode and clicks "Replace event data…":
+
+1. A red-bordered `<dialog>` opens listing exactly what will be deleted ("57 sessions will be deleted", "159 speakers will be deleted", …) pulled from the preview totals.
+2. A prominent **"Download JSON backup"** button (using the existing `admin-post.php?action=digitone_events_export&format=json&event_id=…` nonce-protected URL) opens the JSON export in a new tab. JSON-format event snapshots are round-trippable via the existing Import-as-new-event panel, so the user has a real safety net.
+3. An "I have a backup and understand this cannot be undone." checkbox below; the **"Replace everything"** button stays disabled until it's ticked.
+4. Only when both conditions are met does the commit fire.
+
+Switching from "Full overwrite" back to "Incremental" with a preview already on screen re-runs the preview automatically so the displayed numbers stay honest.
+
+#### Internal
+- `DigitOne_Events_Export_Import_Excel::run()` was extended with two helpers:
+  - `count_existing( $entity_key, $event_id )` — used in dry-run + full mode so the preview shows accurate "will delete" totals before any DB write happens.
+  - `wipe_entity( $entity_key, $event_id )` — used in commit + full mode. Iterates and calls each repo's `delete()` (which handles its own junction-table cleanup, so we don't need raw SQL). Called in **reverse** of `IMPORT_ORDER`: sessions first (because everything references them), titles last (because nothing references titles).
+- `prime_caches()` now takes a `$mode` argument. In full mode it returns empty buckets (no `by_nk` pre-population, no `next_order` / `color_idx` from existing rows) so the import behaves as if the slate were already wiped. That means the same code path produces correct results for both dry-run-on-full-mode (cache empty, no dedup happens, FK lookups grow as imports happen) and commit-on-full-mode (DB really is empty, same behaviour).
+- `import_entity()` already skipped dedup in non-incremental modes; no changes there.
+- AJAX `excel_preview` / `excel_commit` lost the "Full mode is not yet enabled" guard from 0.9.0 and now pass mode through directly.
+
+### Note
+The danger dialog uses the native `<dialog>` element. Modern browsers (Chrome/Firefox/Safari/Edge 2022+) support it natively; the fallback `setAttribute('open', '')` keeps it functional for older builds but without the proper modal backdrop. WP admin is already a modern-browser-only environment so this is a non-issue in practice.
 
 ## [0.9.3] - 2026-05-14
 

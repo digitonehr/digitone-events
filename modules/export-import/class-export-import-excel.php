@@ -284,23 +284,160 @@ final class DigitOne_Events_Export_Import_Excel {
 	 */
 	public function run( array $payload, string $event_id, string $mode, bool $dry_run ) : array {
 		$results = [];
-		$caches  = $this->prime_caches( $event_id );
 
-		foreach ( self::IMPORT_ORDER as $entity_key ) {
-			$def       = self::ENTITIES[ $entity_key ];
-			$sheet     = $def['sheet'];
-			$rows      = isset( $payload[ $sheet ] ) && is_array( $payload[ $sheet ] ) ? $payload[ $sheet ] : [];
-			$results[ $entity_key ] = $this->import_entity( $entity_key, $rows, $event_id, $mode, $dry_run, $caches );
+		// Initialize result slots so per-entity counters always exist
+		// (frontend renders deleted/inserted/skipped/errors columns).
+		foreach ( self::IMPORT_ORDER as $ek ) {
+			$results[ $ek ] = [
+				'sheet'    => self::ENTITIES[ $ek ]['sheet'],
+				'inserted' => 0,
+				'skipped'  => 0,
+				'deleted'  => 0,
+				'errors'   => [],
+			];
 		}
 
-		$totals = [ 'inserted' => 0, 'skipped' => 0, 'errors' => 0 ];
+		/* Full mode: count or actually delete every existing row first,
+		 * in reverse dependency order. Sessions reference everything else
+		 * so they go first; titles have nothing pointing at them so they
+		 * go last. */
+		if ( $mode === 'full' ) {
+			if ( $dry_run ) {
+				foreach ( self::IMPORT_ORDER as $ek ) {
+					$results[ $ek ]['deleted'] = $this->count_existing( $ek, $event_id );
+				}
+			} else {
+				foreach ( array_reverse( self::IMPORT_ORDER ) as $ek ) {
+					$results[ $ek ]['deleted'] = $this->wipe_entity( $ek, $event_id );
+				}
+			}
+		}
+
+		/* Caches:
+		 *   - incremental → prime from current DB rows (dedup + FK lookup).
+		 *   - full + dry-run → empty (we'd be about to wipe anyway, so
+		 *     the preview should reflect "everything comes from the import").
+		 *   - full + commit → empty (DB is empty post-wipe).
+		 */
+		$caches = $this->prime_caches( $event_id, $mode );
+
+		foreach ( self::IMPORT_ORDER as $entity_key ) {
+			$def    = self::ENTITIES[ $entity_key ];
+			$sheet  = $def['sheet'];
+			$rows   = isset( $payload[ $sheet ] ) && is_array( $payload[ $sheet ] ) ? $payload[ $sheet ] : [];
+			$result = $this->import_entity( $entity_key, $rows, $event_id, $mode, $dry_run, $caches );
+			$results[ $entity_key ]['inserted'] = $result['inserted'];
+			$results[ $entity_key ]['skipped']  = $result['skipped'];
+			$results[ $entity_key ]['errors']   = $result['errors'];
+		}
+
+		$totals = [ 'inserted' => 0, 'skipped' => 0, 'deleted' => 0, 'errors' => 0 ];
 		foreach ( $results as $r ) {
 			$totals['inserted'] += $r['inserted'];
 			$totals['skipped']  += $r['skipped'];
+			$totals['deleted']  += $r['deleted'];
 			$totals['errors']   += count( $r['errors'] );
 		}
 
 		return [ 'results' => $results, 'totals' => $totals, 'mode' => $mode, 'dry_run' => $dry_run ];
+	}
+
+	/* ============================================================
+	 * Full-mode helpers: count + wipe per entity.
+	 * Repos already do their own junction cleanup on delete() so we
+	 * just iterate. Order matters — caller is responsible for going
+	 * in reverse dependency order.
+	 * ============================================================ */
+	private function count_existing( string $entity_key, string $event_id ) : int {
+		$plugin = DigitOne_Events_Plugin::instance();
+		switch ( $entity_key ) {
+			case 'titles':
+				return count( $plugin->module( 'titles' )->repo()->all_for_event( $event_id ) );
+			case 'roles':
+				return count( $plugin->module( 'roles' )->repo()->all_for_event( $event_id ) );
+			case 'session_types':
+				return count( $plugin->module( 'session_types' )->repo()->all_for_event( $event_id ) );
+			case 'venues':
+				return count( $plugin->module( 'venues' )->repo()->tree_for_event( $event_id ) );
+			case 'sub_venues':
+				$n = 0;
+				foreach ( $plugin->module( 'venues' )->repo()->tree_for_event( $event_id ) as $v ) {
+					$n += count( (array) ( $v['sub_venues'] ?? [] ) );
+				}
+				return $n;
+			case 'days':
+				return count( $plugin->module( 'days' )->repo()->all_for_event( $event_id ) );
+			case 'speakers':
+				return count( $plugin->module( 'speakers' )->repo()->all_for_event( $event_id ) );
+			case 'sessions':
+				$n = 0;
+				$sessions_repo = $plugin->module( 'sessions' )->repo();
+				foreach ( $plugin->module( 'days' )->repo()->all_for_event( $event_id ) as $d ) {
+					$n += count( $sessions_repo->all_for_day( $d['id'] ) );
+				}
+				return $n;
+		}
+		return 0;
+	}
+
+	private function wipe_entity( string $entity_key, string $event_id ) : int {
+		$plugin = DigitOne_Events_Plugin::instance();
+		$count  = 0;
+		switch ( $entity_key ) {
+			case 'sessions':
+				$repo = $plugin->module( 'sessions' )->repo();
+				foreach ( $plugin->module( 'days' )->repo()->all_for_event( $event_id ) as $d ) {
+					foreach ( $repo->all_for_day( $d['id'] ) as $s ) {
+						if ( $repo->delete( $s['id'] ) ) $count++;
+					}
+				}
+				return $count;
+			case 'speakers':
+				$repo = $plugin->module( 'speakers' )->repo();
+				foreach ( $repo->all_for_event( $event_id ) as $sp ) {
+					if ( $repo->delete( $sp['id'] ) ) $count++;
+				}
+				return $count;
+			case 'days':
+				$repo = $plugin->module( 'days' )->repo();
+				foreach ( $repo->all_for_event( $event_id ) as $d ) {
+					if ( $repo->delete( $d['id'] ) ) $count++;
+				}
+				return $count;
+			case 'sub_venues':
+				$repo = $plugin->module( 'venues' )->repo();
+				foreach ( $repo->tree_for_event( $event_id ) as $v ) {
+					foreach ( (array) ( $v['sub_venues'] ?? [] ) as $sub ) {
+						if ( $repo->delete( $sub['id'] ) ) $count++;
+					}
+				}
+				return $count;
+			case 'venues':
+				$repo = $plugin->module( 'venues' )->repo();
+				foreach ( $repo->tree_for_event( $event_id ) as $v ) {
+					if ( $repo->delete( $v['id'] ) ) $count++;
+				}
+				return $count;
+			case 'session_types':
+				$repo = $plugin->module( 'session_types' )->repo();
+				foreach ( $repo->all_for_event( $event_id ) as $t ) {
+					if ( $repo->delete( $t['id'] ) ) $count++;
+				}
+				return $count;
+			case 'roles':
+				$repo = $plugin->module( 'roles' )->repo();
+				foreach ( $repo->all_for_event( $event_id ) as $r ) {
+					if ( $repo->delete( $r['id'] ) ) $count++;
+				}
+				return $count;
+			case 'titles':
+				$repo = $plugin->module( 'titles' )->repo();
+				foreach ( $repo->all_for_event( $event_id ) as $t ) {
+					if ( $repo->delete( $t['id'] ) ) $count++;
+				}
+				return $count;
+		}
+		return 0;
 	}
 
 	/* ============================================================ */
@@ -592,7 +729,7 @@ final class DigitOne_Events_Export_Import_Excel {
 	 * so blank sort_order / color columns can be auto-filled at insert
 	 * time without re-querying the DB.
 	 */
-	private function prime_caches( string $event_id ) : array {
+	private function prime_caches( string $event_id, string $mode = 'incremental' ) : array {
 		$plugin = DigitOne_Events_Plugin::instance();
 		$caches = [];
 
@@ -605,6 +742,14 @@ final class DigitOne_Events_Export_Import_Excel {
 			];
 		}
 		$caches['speakers']['by_name'] = []; // FK lookup helper (used by sessions)
+
+		// Full mode (commit or dry-run): start with empty buckets — every
+		// existing row is going / has gone. Inserts will populate the
+		// caches as they happen so FK resolution inside the same import
+		// keeps working.
+		if ( $mode === 'full' ) {
+			return $caches;
+		}
 
 		// --- Titles ---
 		foreach ( $plugin->module( 'titles' )->repo()->all_for_event( $event_id ) as $t ) {

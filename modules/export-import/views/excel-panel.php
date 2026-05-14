@@ -39,7 +39,19 @@ defined( 'ABSPATH' ) || exit;
 
 			<div class="de-excel-col">
 				<h3><?php esc_html_e( '2. Upload your workbook', 'digitone-events' ); ?></h3>
-				<p class="description"><?php esc_html_e( 'Incremental mode only in this release: rows that already exist (matched by name / date / time) are skipped, the rest are inserted.', 'digitone-events' ); ?></p>
+				<fieldset class="de-excel-mode" data-de-excel-mode>
+					<legend class="screen-reader-text"><?php esc_html_e( 'Import mode', 'digitone-events' ); ?></legend>
+					<label class="de-excel-mode-option is-active">
+						<input type="radio" name="de-excel-mode" value="incremental" checked>
+						<span class="de-excel-mode-title"><?php esc_html_e( 'Incremental', 'digitone-events' ); ?></span>
+						<span class="de-excel-mode-desc"><?php esc_html_e( 'Insert rows that don\'t exist yet; skip the rest. Safe to re-run.', 'digitone-events' ); ?></span>
+					</label>
+					<label class="de-excel-mode-option de-excel-mode-danger">
+						<input type="radio" name="de-excel-mode" value="full">
+						<span class="de-excel-mode-title"><?php esc_html_e( 'Full overwrite', 'digitone-events' ); ?></span>
+						<span class="de-excel-mode-desc"><?php esc_html_e( 'Delete everything for this event, then insert from the workbook. Destructive — backup recommended.', 'digitone-events' ); ?></span>
+					</label>
+				</fieldset>
 				<div class="de-excel-upload">
 					<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" data-de-excel-file>
 					<button type="button" class="button button-primary" data-de-action="excel-preview" disabled>
@@ -57,6 +69,7 @@ defined( 'ABSPATH' ) || exit;
 				<thead>
 					<tr>
 						<th><?php esc_html_e( 'Entity', 'digitone-events' ); ?></th>
+						<th class="de-col-num de-excel-col-delete" hidden><?php esc_html_e( 'Will delete', 'digitone-events' ); ?></th>
 						<th class="de-col-num"><?php esc_html_e( 'Will insert', 'digitone-events' ); ?></th>
 						<th class="de-col-num"><?php esc_html_e( 'Will skip', 'digitone-events' ); ?></th>
 						<th class="de-col-num"><?php esc_html_e( 'Errors', 'digitone-events' ); ?></th>
@@ -86,6 +99,57 @@ defined( 'ABSPATH' ) || exit;
 				</button>
 			</p>
 		</div>
+
+	<?php /* Full-mode confirmation dialog. Hidden until user clicks Confirm
+	         in full mode; forces them to download a JSON backup (or tick
+	         "I already have a backup") before the Replace button enables. */ ?>
+	<dialog class="de-excel-danger-dialog" data-de-excel-danger>
+		<form method="dialog">
+			<header class="de-excel-danger-header">
+				<h3>⚠️ <?php esc_html_e( 'Confirm destructive import', 'digitone-events' ); ?></h3>
+			</header>
+			<div class="de-excel-danger-body">
+				<p>
+					<?php
+					/* translators: %s: event name */
+					printf(
+						esc_html__( 'You are about to REPLACE all existing data for %s with the contents of the uploaded workbook. This includes:', 'digitone-events' ),
+						'<strong>' . esc_html( $active_event['name'] ?? '' ) . '</strong>'
+					);
+					?>
+				</p>
+				<ul class="de-excel-danger-list" data-de-danger-list>
+					<!-- populated by JS from preview totals -->
+				</ul>
+				<p class="de-excel-danger-irreversible"><strong><?php esc_html_e( 'This cannot be undone.', 'digitone-events' ); ?></strong> <?php esc_html_e( 'Strongly recommended: download a JSON backup first.', 'digitone-events' ); ?></p>
+				<p>
+					<?php
+					$backup_url = wp_nonce_url(
+						admin_url( 'admin-post.php?action=digitone_events_export&format=json&event_id=' . urlencode( $active_event_id ) ),
+						DigitOne_Events_Export_Import_Ajax::EXPORT_NONCE
+					);
+					?>
+					<a class="button button-primary button-hero"
+						href="<?php echo esc_url( $backup_url ); ?>"
+						target="_blank"
+						rel="noopener"
+						data-de-backup-link>
+						📦 <?php esc_html_e( 'Download JSON backup', 'digitone-events' ); ?>
+					</a>
+				</p>
+				<label class="de-excel-danger-confirm">
+					<input type="checkbox" data-de-danger-checkbox>
+					<?php esc_html_e( 'I have a backup and understand this cannot be undone.', 'digitone-events' ); ?>
+				</label>
+			</div>
+			<footer class="de-excel-danger-footer">
+				<button type="button" class="button" data-de-action="excel-danger-cancel"><?php esc_html_e( 'Cancel', 'digitone-events' ); ?></button>
+				<button type="button" class="button button-danger" data-de-action="excel-danger-proceed" disabled>
+					<?php esc_html_e( 'Replace everything', 'digitone-events' ); ?>
+				</button>
+			</footer>
+		</form>
+	</dialog>
 
 	<?php endif; ?>
 </section>

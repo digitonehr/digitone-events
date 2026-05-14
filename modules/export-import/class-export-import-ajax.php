@@ -83,11 +83,6 @@ final class DigitOne_Events_Export_Import_Ajax {
 			wp_send_json_error( [ 'message' => __( 'Payload is not valid JSON.', 'digitone-events' ) ] );
 		}
 
-		// 0.9.0 ships incremental only; full mode is in 0.9.1.
-		if ( $mode === 'full' ) {
-			wp_send_json_error( [ 'message' => __( 'Full mode is not yet enabled.', 'digitone-events' ) ] );
-		}
-
 		$excel  = new DigitOne_Events_Export_Import_Excel();
 		$report = $excel->run( $payload, $event_id, $mode, $dry_run );
 		wp_send_json_success( $report );
