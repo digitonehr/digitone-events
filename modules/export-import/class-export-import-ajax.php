@@ -20,6 +20,77 @@ final class DigitOne_Events_Export_Import_Ajax {
 
 	public function register() : void {
 		// (admin_post_ hooks are registered in module->register())
+		add_action( 'wp_ajax_digitone_events_excel_snapshot', [ $this, 'excel_snapshot' ] );
+		add_action( 'wp_ajax_digitone_events_excel_preview',  [ $this, 'excel_preview' ] );
+		add_action( 'wp_ajax_digitone_events_excel_commit',   [ $this, 'excel_commit' ] );
+	}
+
+	/* ============================================================ */
+	/* EXCEL: snapshot / preview / commit (v0.9.0)                  */
+	/* ============================================================ */
+
+	/**
+	 * Returns the current event's data as a sheet-shaped JSON. Client side
+	 * turns this into an .xlsx via SheetJS. `mode=empty` returns the same
+	 * shape but with zero data rows — used for the "Download template" link.
+	 */
+	public function excel_snapshot() : void {
+		DigitOne_Events_Security_Nonce::verify_ajax();
+		$event_id = isset( $_POST['event_id'] ) ? sanitize_text_field( wp_unslash( $_POST['event_id'] ) ) : '';
+		$mode     = isset( $_POST['mode'] )     ? sanitize_text_field( wp_unslash( $_POST['mode'] ) )     : 'full';
+		if ( $event_id === '' ) {
+			wp_send_json_error( [ 'message' => __( 'No active event.', 'digitone-events' ) ] );
+		}
+		$excel = new DigitOne_Events_Export_Import_Excel();
+		$data  = $excel->snapshot( $event_id, $mode === 'empty' );
+		wp_send_json_success( [
+			'event_id' => $event_id,
+			'data'     => $data,
+			'schema'   => DigitOne_Events_Export_Import_Excel::ENTITIES,
+		] );
+	}
+
+	/**
+	 * Dry-run a parsed Excel payload: validate FKs, count what would happen.
+	 * Same code path as commit, just `dry_run=true`.
+	 */
+	public function excel_preview() : void {
+		DigitOne_Events_Security_Nonce::verify_ajax();
+		$this->run_excel_payload( /* dry_run = */ true );
+	}
+
+	/**
+	 * Actually commit a parsed Excel payload to the database.
+	 */
+	public function excel_commit() : void {
+		DigitOne_Events_Security_Nonce::verify_ajax();
+		$this->run_excel_payload( /* dry_run = */ false );
+	}
+
+	private function run_excel_payload( bool $dry_run ) : void {
+		$event_id    = isset( $_POST['event_id'] ) ? sanitize_text_field( wp_unslash( $_POST['event_id'] ) ) : '';
+		$mode        = isset( $_POST['mode'] )     ? sanitize_text_field( wp_unslash( $_POST['mode'] ) )     : 'incremental';
+		$payload_raw = isset( $_POST['payload'] )  ? wp_unslash( $_POST['payload'] )                          : '';
+		if ( $event_id === '' || ! is_string( $payload_raw ) || $payload_raw === '' ) {
+			wp_send_json_error( [ 'message' => __( 'Missing event or payload.', 'digitone-events' ) ] );
+		}
+		if ( ! in_array( $mode, [ 'incremental', 'full' ], true ) ) {
+			$mode = 'incremental';
+		}
+
+		$payload = json_decode( $payload_raw, true );
+		if ( ! is_array( $payload ) ) {
+			wp_send_json_error( [ 'message' => __( 'Payload is not valid JSON.', 'digitone-events' ) ] );
+		}
+
+		// 0.9.0 ships incremental only; full mode is in 0.9.1.
+		if ( $mode === 'full' ) {
+			wp_send_json_error( [ 'message' => __( 'Full mode is not yet enabled.', 'digitone-events' ) ] );
+		}
+
+		$excel  = new DigitOne_Events_Export_Import_Excel();
+		$report = $excel->run( $payload, $event_id, $mode, $dry_run );
+		wp_send_json_success( $report );
 	}
 
 	/* ============================================================ */

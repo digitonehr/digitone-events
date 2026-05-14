@@ -48,3 +48,76 @@
 	padding: 1px 6px;
 	border-radius: 3px;
 }
+
+/* ============================================================ */
+/* EXCEL IMPORT / EXPORT PANEL (v0.9.0)                          */
+/* ============================================================ */
+.de-ei-excel-card {
+	margin-top: 24px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px 24px;
+}
+.de-excel-blurb {
+	color: #50575e;
+	font-size: 13px;
+	margin: 0 0 16px;
+}
+.de-excel-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
+	margin-bottom: 8px;
+}
+@media (max-width: 782px) {
+	.de-excel-row { grid-template-columns: 1fr; }
+}
+.de-excel-col h3 {
+	margin: 0 0 6px;
+	font-size: 14px;
+	font-weight: 600;
+}
+.de-excel-col .description {
+	font-size: 12px;
+	margin: 0 0 12px;
+}
+.de-excel-buttons {
+	margin: 8px 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.de-excel-upload {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+.de-excel-upload input[type="file"] {
+	flex: 1 1 auto;
+	min-width: 220px;
+}
+.de-excel-result {
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid #dcdcde;
+}
+.de-excel-summary {
+	margin-bottom: 12px;
+}
+.de-excel-table .de-col-num {
+	width: 100px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.de-excel-table td.de-col-num,
+.de-excel-table th.de-col-num {
+	text-align: right;
+}
+.de-excel-errors {
+	margin-top: 16px;
+}
+.de-excel-errors h4 {
+	margin: 0 0 6px;
+}

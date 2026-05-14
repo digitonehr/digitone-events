@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-05-14
+
+### Added — Excel bulk import / export on the Export/Import page
+
+The Sessions-page CSV importer from 0.8.9 (which expected semicolon-separated speakers in a single column) was hard to use for non-developers. Replaced with a workbook-based flow on the Export / Import admin page:
+
+#### Workflow
+1. **Get a workbook**: "Download empty template" (an `.xlsx` with one sheet per entity, only the header row populated) or "Download current data" (same shape but pre-filled with the active event's existing rows). Both are generated client-side via [SheetJS](https://sheetjs.com), lazy-loaded from cdnjs the first time a button is clicked.
+2. **Edit in Excel / Google Sheets / LibreOffice**: each sheet has clearly named columns. Speakers list multiple roles via `;` separation; sessions list multiple speakers via `;` separation. Sheet names and column headers tell you exactly what each field is, no documentation needed.
+3. **Upload `.xlsx`**: SheetJS parses the workbook in the browser, auto-maps sheet names to entities and column headers to fields (case-insensitive, normalized — "Session Types", "session_types", "SESSION-TYPES" all match), and POSTs the resulting JSON to the **preview** endpoint.
+4. **Preview**: per-entity table of `will insert / will skip / errors`, plus a detail table of every skipped row with the reason (missing field, unknown venue / type / role, bad date format…). Sheets the auto-mapper didn't recognize and columns it didn't map are listed as warnings.
+5. **Confirm import**: same JSON re-POSTs to the commit endpoint, which runs the exact same code path (`run()` with `dry_run=false`) so what you preview is what you get.
+
+#### Entities supported, in dependency order
+`Titles → Roles → Session-Types → Venues → Sub-Venues → Days → Speakers → Sessions`. Within Speakers, the `title` and `roles` columns reference the previously-imported Titles and Roles by name; within Sessions, `day_date`, `venue`, `sub_venue`, `session_type`, `speakers`, and `default_role` resolve against everything earlier.
+
+#### Mode (this release)
+**Incremental only**: rows whose natural key already exists (name for taxonomies, `first_name + last_name` for speakers, `day_date + start_time + title` for sessions, `name + parent_venue` for sub-venues) are skipped; only new rows are inserted. **Full / overwrite mode** lands in 0.9.1, together with a JSON backup-download integration before the destructive step.
+
+#### Auto-mapping fallback
+This release only does auto-detection. If a sheet's columns don't match the schema, that sheet's rows are skipped and a warning shown; user can fix headers in Excel and re-upload. Manual mapping UI (drag-and-drop column-to-field for the edge case) is scheduled for 0.9.2.
+
+### Internal
+- New `DigitOne_Events_Export_Import_Excel` class in `modules/export-import/class-export-import-excel.php`. Defines the schema once (`ENTITIES` const), provides `snapshot()` for export-side data shaping and `run()` for the import side. `run()` is the single source of truth for both preview and commit — preview just passes `dry_run=true`, which still walks every row, validates FKs, populates the natural-key cache so later entities (Sessions referencing Speakers, Sub-Venues referencing Venues) can resolve correctly during the preview pass.
+- Three new AJAX endpoints in `class-export-import-ajax.php`:
+  - `digitone_events_excel_snapshot` — returns `{ data, schema }` for client-side workbook building (`mode=full` for export, `mode=empty` for template).
+  - `digitone_events_excel_preview` — dry-run with full validation, returns the per-entity report.
+  - `digitone_events_excel_commit` — actually inserts. Same payload shape as preview.
+- JS in `assets/js/modules/export-import.js` — auto-enqueued by hook detection (the existing `class-assets.php` maps the page hook `digitone-events_page_digitone-events-export-import` to module slug `export-import`).
+- CSS in `assets/css/modules/export-import.css` (panel layout + result tables).
+
+### Removed
+- Sessions-page **Import CSV…** button + CSV modal + handler + AJAX endpoint + `class-sessions-csv-importer.php`. The Excel workflow on Export / Import supersedes it entirely (and supports more entities, not just sessions).
+
 ## [0.8.10] - 2026-05-14
 
 ### Fixed — "Import CSV…" button did nothing
@@ -311,6 +345,40 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.9.0] - 2026-05-14
+
+### Added — Excel bulk import / export on the Export/Import page
+
+The Sessions-page CSV importer from 0.8.9 (which expected semicolon-separated speakers in a single column) was hard to use for non-developers. Replaced with a workbook-based flow on the Export / Import admin page:
+
+#### Workflow
+1. **Get a workbook**: "Download empty template" (an `.xlsx` with one sheet per entity, only the header row populated) or "Download current data" (same shape but pre-filled with the active event's existing rows). Both are generated client-side via [SheetJS](https://sheetjs.com), lazy-loaded from cdnjs the first time a button is clicked.
+2. **Edit in Excel / Google Sheets / LibreOffice**: each sheet has clearly named columns. Speakers list multiple roles via `;` separation; sessions list multiple speakers via `;` separation. Sheet names and column headers tell you exactly what each field is, no documentation needed.
+3. **Upload `.xlsx`**: SheetJS parses the workbook in the browser, auto-maps sheet names to entities and column headers to fields (case-insensitive, normalized — "Session Types", "session_types", "SESSION-TYPES" all match), and POSTs the resulting JSON to the **preview** endpoint.
+4. **Preview**: per-entity table of `will insert / will skip / errors`, plus a detail table of every skipped row with the reason (missing field, unknown venue / type / role, bad date format…). Sheets the auto-mapper didn't recognize and columns it didn't map are listed as warnings.
+5. **Confirm import**: same JSON re-POSTs to the commit endpoint, which runs the exact same code path (`run()` with `dry_run=false`) so what you preview is what you get.
+
+#### Entities supported, in dependency order
+`Titles → Roles → Session-Types → Venues → Sub-Venues → Days → Speakers → Sessions`. Within Speakers, the `title` and `roles` columns reference the previously-imported Titles and Roles by name; within Sessions, `day_date`, `venue`, `sub_venue`, `session_type`, `speakers`, and `default_role` resolve against everything earlier.
+
+#### Mode (this release)
+**Incremental only**: rows whose natural key already exists (name for taxonomies, `first_name + last_name` for speakers, `day_date + start_time + title` for sessions, `name + parent_venue` for sub-venues) are skipped; only new rows are inserted. **Full / overwrite mode** lands in 0.9.1, together with a JSON backup-download integration before the destructive step.
+
+#### Auto-mapping fallback
+This release only does auto-detection. If a sheet's columns don't match the schema, that sheet's rows are skipped and a warning shown; user can fix headers in Excel and re-upload. Manual mapping UI (drag-and-drop column-to-field for the edge case) is scheduled for 0.9.2.
+
+### Internal
+- New `DigitOne_Events_Export_Import_Excel` class in `modules/export-import/class-export-import-excel.php`. Defines the schema once (`ENTITIES` const), provides `snapshot()` for export-side data shaping and `run()` for the import side. `run()` is the single source of truth for both preview and commit — preview just passes `dry_run=true`, which still walks every row, validates FKs, populates the natural-key cache so later entities (Sessions referencing Speakers, Sub-Venues referencing Venues) can resolve correctly during the preview pass.
+- Three new AJAX endpoints in `class-export-import-ajax.php`:
+  - `digitone_events_excel_snapshot` — returns `{ data, schema }` for client-side workbook building (`mode=full` for export, `mode=empty` for template).
+  - `digitone_events_excel_preview` — dry-run with full validation, returns the per-entity report.
+  - `digitone_events_excel_commit` — actually inserts. Same payload shape as preview.
+- JS in `assets/js/modules/export-import.js` — auto-enqueued by hook detection (the existing `class-assets.php` maps the page hook `digitone-events_page_digitone-events-export-import` to module slug `export-import`).
+- CSS in `assets/css/modules/export-import.css` (panel layout + result tables).
+
+### Removed
+- Sessions-page **Import CSV…** button + CSV modal + handler + AJAX endpoint + `class-sessions-csv-importer.php`. The Excel workflow on Export / Import supersedes it entirely (and supports more entities, not just sessions).
 
 ## [0.8.10] - 2026-05-14
 

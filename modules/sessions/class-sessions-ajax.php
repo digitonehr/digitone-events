@@ -22,7 +22,6 @@ final class DigitOne_Events_Sessions_Ajax {
 		add_action( 'wp_ajax_digitone_events_session_delete',      [ $this, 'delete_session' ] );
 		add_action( 'wp_ajax_digitone_events_session_bulk_delete', [ $this, 'bulk_delete' ] );
 		add_action( 'wp_ajax_digitone_events_session_masters_for_day', [ $this, 'masters_for_day' ] );
-		add_action( 'wp_ajax_digitone_events_session_csv_import',  [ $this, 'csv_import' ] );
 	}
 
 	public function list_sessions() : void {
@@ -130,53 +129,4 @@ final class DigitOne_Events_Sessions_Ajax {
 		] );
 	}
 
-	/* ============================================================ */
-	/* CSV BULK IMPORT (v0.8.9)                                     */
-	/* Expects multipart/form-data POST with:                       */
-	/*   - 'csv'       file (.csv, UTF-8, header row required)      */
-	/*   - 'event_id'  target event UUID                            */
-	/* ============================================================ */
-	public function csv_import() : void {
-		DigitOne_Events_Security_Nonce::verify_ajax();
-		if ( ! DigitOne_Events_Security_Capabilities::current_user_can_manage() ) {
-			wp_send_json_error( [ 'message' => __( 'Insufficient permissions.', 'digitone-events' ) ], 403 );
-		}
-
-		$event_id = isset( $_POST['event_id'] ) ? sanitize_text_field( wp_unslash( $_POST['event_id'] ) ) : '';
-		if ( $event_id === '' ) {
-			wp_send_json_error( [ 'message' => __( 'No active event.', 'digitone-events' ) ] );
-		}
-
-		if ( ! isset( $_FILES['csv'] ) || ! is_array( $_FILES['csv'] ) ) {
-			wp_send_json_error( [ 'message' => __( 'No file uploaded.', 'digitone-events' ) ] );
-		}
-		$file = $_FILES['csv'];
-
-		if ( ! empty( $file['error'] ) && $file['error'] !== UPLOAD_ERR_OK ) {
-			wp_send_json_error( [ 'message' => __( 'File upload error.', 'digitone-events' ) ] );
-		}
-		if ( ! isset( $file['size'] ) || (int) $file['size'] > 5 * 1024 * 1024 ) {
-			wp_send_json_error( [ 'message' => __( 'CSV exceeds 5 MB.', 'digitone-events' ) ] );
-		}
-
-		$name = isset( $file['name'] ) ? (string) $file['name'] : '';
-		if ( ! preg_match( '/\.csv$/i', $name ) ) {
-			wp_send_json_error( [ 'message' => __( 'Only .csv files are accepted.', 'digitone-events' ) ] );
-		}
-
-		$tmp = isset( $file['tmp_name'] ) ? (string) $file['tmp_name'] : '';
-		if ( $tmp === '' || ! is_uploaded_file( $tmp ) ) {
-			wp_send_json_error( [ 'message' => __( 'Upload could not be read.', 'digitone-events' ) ] );
-		}
-
-		$content = file_get_contents( $tmp );
-		if ( $content === false ) {
-			wp_send_json_error( [ 'message' => __( 'Failed to read uploaded file.', 'digitone-events' ) ] );
-		}
-
-		$importer = new DigitOne_Events_Sessions_Csv_Importer();
-		$report   = $importer->import( $content, $event_id );
-
-		wp_send_json_success( $report );
-	}
 }

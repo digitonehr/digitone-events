@@ -119,6 +119,14 @@ $export_csv_url = $active ? wp_nonce_url(
 		</section>
 	</div>
 
+	<?php DigitOne_Events_Helpers_View::render(
+		'modules/export-import/views/excel-panel',
+		[
+			'active_event_id' => $active_event_id,
+			'active_event'    => $active,
+		]
+	); ?>
+
 	<details class="de-ei-format-notes">
 		<summary><?php esc_html_e( 'JSON format reference', 'digitone-events' ); ?></summary>
 		<p><?php esc_html_e( 'The export includes:', 'digitone-events' ); ?></p>
