@@ -140,7 +140,7 @@ final class DigitOne_Events_Export_Import_Excel {
 			];
 		}, $roles );
 
-		$types = $plugin->module( 'session-types' )->repo()->all_for_event( $event_id );
+		$types = $plugin->module( 'session_types' )->repo()->all_for_event( $event_id );
 		$out['Session-Types'] = array_map( function ( $t ) {
 			return [
 				'name'       => (string) ( $t['name']  ?? '' ),
@@ -362,7 +362,7 @@ final class DigitOne_Events_Export_Import_Excel {
 					'color'      => trim( (string) ( $row['color'] ?? '' ) ),
 					'sort_order' => (int) ( $row['sort_order'] ?? 0 ),
 				];
-				return $this->commit_simple( $entity_key, $plugin->module( 'session-types' )->repo(), $data, $dry_run, $caches );
+				return $this->commit_simple( $entity_key, $plugin->module( 'session_types' )->repo(), $data, $dry_run, $caches );
 
 			case 'venues':
 				$data = [
@@ -573,7 +573,7 @@ final class DigitOne_Events_Export_Import_Excel {
 		}
 
 		$caches['session_types']['by_nk'] = [];
-		foreach ( $plugin->module( 'session-types' )->repo()->all_for_event( $event_id ) as $t ) {
+		foreach ( $plugin->module( 'session_types' )->repo()->all_for_event( $event_id ) as $t ) {
 			$caches['session_types']['by_nk'][ $this->fold( $t['name'] ) ] = $t['id'];
 		}
 

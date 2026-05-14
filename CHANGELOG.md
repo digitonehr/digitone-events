@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-05-14
+
+### Fixed — Excel snapshot / preview / commit threw PHP fatal
+
+`DigitOne_Events_Plugin::instance()->module( 'session-types' )` returned `null` because the module is registered under the **underscore** slug `session_types` (in `class-plugin.php`), not the hyphenated directory name. `->repo()` on null hit a fatal in `class-export-import-excel.php`; the fatal printed as HTML, the AJAX response stopped being JSON, and the front-end threw `JSON.parse: unexpected character at line 1 column 1`. Fixed three call sites in that file. Other module slugs in the codebase are all single-word so this only bit session_types.
+
 ## [0.9.0] - 2026-05-14
 
 ### Added — Excel bulk import / export on the Export/Import page
@@ -345,6 +351,12 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.9.1] - 2026-05-14
+
+### Fixed — Excel snapshot / preview / commit threw PHP fatal
+
+`DigitOne_Events_Plugin::instance()->module( 'session-types' )` returned `null` because the module is registered under the **underscore** slug `session_types` (in `class-plugin.php`), not the hyphenated directory name. `->repo()` on null hit a fatal in `class-export-import-excel.php`; the fatal printed as HTML, the AJAX response stopped being JSON, and the front-end threw `JSON.parse: unexpected character at line 1 column 1`. Fixed three call sites in that file. Other module slugs in the codebase are all single-word so this only bit session_types.
 
 ## [0.9.0] - 2026-05-14
 
