@@ -105,6 +105,170 @@
 		if ( levelSelect ) levelSelect.addEventListener( 'change', toggleLevel );
 		if ( daySelect )   daySelect.addEventListener( 'change', function () { refreshParentOptions( daySelect.value, '' ); } );
 
+		/* ============================================================
+		 * Speakers autocomplete (v0.8.8) — replaces the old checkbox grid.
+		 *
+		 * Source of truth = a <script type="application/json"> blob the
+		 * server embeds beside the widget, with one entry per speaker
+		 * { id, name, search }. The `search` field is already UTF-8
+		 * lowercased so filtering is a plain substring check.
+		 *
+		 * Selected speakers render as removable "chips"; each chip carries
+		 * a hidden <input name="speaker_ids[]"> so the existing form-submit
+		 * harvest just keeps working.
+		 * ============================================================ */
+		const acRoot     = modal ? modal.querySelector( '[data-de-speakers-ac]' ) : null;
+		const acChips    = acRoot ? acRoot.querySelector( '[data-de-chips]' ) : null;
+		const acInput    = acRoot ? acRoot.querySelector( '[data-de-speakers-input]' ) : null;
+		const acDropdown = acRoot ? acRoot.querySelector( '[data-de-dropdown]' ) : null;
+		const acDataEl   = acRoot ? acRoot.querySelector( '[data-de-speakers-data]' ) : null;
+		let acData = [];
+		if ( acDataEl ) {
+			try { acData = JSON.parse( acDataEl.textContent ) || []; }
+			catch ( e ) { acData = []; }
+		}
+		let acHighlightIdx = -1;
+		let acVisibleMatches = [];
+
+		function speakersSelectedIds() {
+			if ( ! acChips ) return [];
+			return Array.prototype.slice.call(
+				acChips.querySelectorAll( 'input[name="speaker_ids[]"]' )
+			).map( function ( inp ) { return inp.value; } );
+		}
+		function setSpeakersAutocomplete( ids ) {
+			if ( ! acRoot || ! acChips ) return;
+			acChips.innerHTML = '';
+			( ids || [] ).forEach( function ( id ) { addSpeakerChip( id ); } );
+			if ( acInput ) acInput.value = '';
+			hideDropdown();
+		}
+		function addSpeakerChip( id ) {
+			if ( ! acChips ) return;
+			if ( speakersSelectedIds().indexOf( id ) !== -1 ) return;
+			const sp = acData.find( function ( s ) { return s.id === id; } );
+			if ( ! sp ) return;
+			const chip = document.createElement( 'span' );
+			chip.className = 'de-speakers-chip';
+			chip.setAttribute( 'data-speaker-id', id );
+
+			const label = document.createElement( 'span' );
+			label.className = 'de-speakers-chip-label';
+			label.textContent = sp.name;
+			chip.appendChild( label );
+
+			const remove = document.createElement( 'button' );
+			remove.type = 'button';
+			remove.className = 'de-speakers-chip-remove';
+			remove.setAttribute( 'aria-label', 'Remove ' + sp.name );
+			remove.textContent = '×';
+			remove.addEventListener( 'click', function () {
+				chip.remove();
+				if ( acInput ) acInput.focus();
+			} );
+			chip.appendChild( remove );
+
+			const hidden = document.createElement( 'input' );
+			hidden.type  = 'hidden';
+			hidden.name  = 'speaker_ids[]';
+			hidden.value = id;
+			chip.appendChild( hidden );
+
+			acChips.appendChild( chip );
+		}
+		function hideDropdown() {
+			if ( ! acDropdown ) return;
+			acDropdown.hidden = true;
+			acDropdown.innerHTML = '';
+			acHighlightIdx = -1;
+			acVisibleMatches = [];
+		}
+		function renderDropdown( matches ) {
+			if ( ! acDropdown ) return;
+			acDropdown.innerHTML = '';
+			acVisibleMatches = matches;
+			if ( ! matches.length ) {
+				const empty = document.createElement( 'li' );
+				empty.className = 'de-speakers-dropdown-empty';
+				empty.textContent = 'No matches';
+				acDropdown.appendChild( empty );
+			} else {
+				matches.forEach( function ( sp, idx ) {
+					const li = document.createElement( 'li' );
+					li.className = 'de-speakers-dropdown-item';
+					li.setAttribute( 'role', 'option' );
+					li.setAttribute( 'data-speaker-id', sp.id );
+					li.textContent = sp.name;
+					li.addEventListener( 'mousedown', function ( ev ) {
+						ev.preventDefault(); // keep input focused
+						pickFromDropdown( idx );
+					} );
+					acDropdown.appendChild( li );
+				} );
+			}
+			acDropdown.hidden = false;
+			acHighlightIdx = matches.length ? 0 : -1;
+			updateHighlight();
+		}
+		function updateHighlight() {
+			if ( ! acDropdown ) return;
+			const items = acDropdown.querySelectorAll( '.de-speakers-dropdown-item' );
+			items.forEach( function ( li, i ) {
+				li.classList.toggle( 'is-highlighted', i === acHighlightIdx );
+			} );
+		}
+		function pickFromDropdown( idx ) {
+			if ( ! acVisibleMatches[ idx ] ) return;
+			addSpeakerChip( acVisibleMatches[ idx ].id );
+			if ( acInput ) acInput.value = '';
+			hideDropdown();
+			if ( acInput ) acInput.focus();
+		}
+		function filterAndRender() {
+			if ( ! acInput ) return;
+			const q = acInput.value.trim().toLowerCase();
+			if ( q === '' ) { hideDropdown(); return; }
+			const selected = speakersSelectedIds();
+			const matches = acData.filter( function ( sp ) {
+				return selected.indexOf( sp.id ) === -1 && sp.search.indexOf( q ) !== -1;
+			} ).slice( 0, 10 );
+			renderDropdown( matches );
+		}
+		if ( acInput ) {
+			acInput.addEventListener( 'input', filterAndRender );
+			acInput.addEventListener( 'focus', filterAndRender );
+			acInput.addEventListener( 'keydown', function ( ev ) {
+				if ( acDropdown && acDropdown.hidden ) return;
+				if ( ev.key === 'ArrowDown' ) {
+					ev.preventDefault();
+					acHighlightIdx = Math.min( acHighlightIdx + 1, acVisibleMatches.length - 1 );
+					updateHighlight();
+				} else if ( ev.key === 'ArrowUp' ) {
+					ev.preventDefault();
+					acHighlightIdx = Math.max( acHighlightIdx - 1, 0 );
+					updateHighlight();
+				} else if ( ev.key === 'Enter' ) {
+					if ( acHighlightIdx >= 0 ) {
+						ev.preventDefault();
+						pickFromDropdown( acHighlightIdx );
+					}
+				} else if ( ev.key === 'Escape' ) {
+					hideDropdown();
+				} else if ( ev.key === 'Backspace' && acInput.value === '' ) {
+					// Remove last chip on backspace in empty input
+					if ( acChips ) {
+						const chips = acChips.querySelectorAll( '.de-speakers-chip' );
+						if ( chips.length ) chips[ chips.length - 1 ].remove();
+					}
+				}
+			} );
+		}
+		// Close dropdown on click outside
+		document.addEventListener( 'click', function ( ev ) {
+			if ( ! acRoot ) return;
+			if ( ! acRoot.contains( ev.target ) ) hideDropdown();
+		} );
+
 		function openModal( session ) {
 			if ( ! modal || ! form ) return;
 			form.reset();
@@ -120,10 +284,9 @@
 
 			refreshSubVenues( form.elements.venue_id.value, session ? ( session.sub_venue_id || '' ) : '' );
 
-			// Reset speaker checkboxes
-			const cbs = modal.querySelectorAll( 'input[name="speaker_ids[]"]' );
+			// Populate speakers autocomplete from session.speaker_ids (or empty)
 			const selectedSpeakers = session && session.speaker_ids ? session.speaker_ids : [];
-			cbs.forEach( function ( cb ) { cb.checked = selectedSpeakers.indexOf( cb.value ) !== -1; } );
+			setSpeakersAutocomplete( selectedSpeakers );
 
 			// Default role: pick the first non-null role from the role map if editing
 			form.elements.default_role_id.value = '';
@@ -162,8 +325,8 @@
 			form.addEventListener( 'submit', function ( ev ) {
 				ev.preventDefault();
 				const speaker_ids = Array.prototype.slice.call(
-					modal.querySelectorAll( 'input[name="speaker_ids[]"]:checked' )
-				).map( function ( cb ) { return cb.value; } );
+					modal.querySelectorAll( '[data-de-chips] input[name="speaker_ids[]"]' )
+				).map( function ( inp ) { return inp.value; } );
 
 				const payload = {
 					id:              form.elements.id.value,

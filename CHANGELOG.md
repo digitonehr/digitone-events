@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-05-13
+
+### Changed — Speaker picker in session modal is now an autocomplete
+
+The old picker was a flat checkbox grid of every speaker on the event. Workable with 10 speakers, painful with 50, unusable with 163 (the IAAS 2026 roster). Picking "Karlović Zoran" meant scrolling alphabetically through a grid that didn't fit the modal. Replaced with:
+
+- **Type-to-find input** with a dropdown of matching speakers (top 10). Matches both `first last` and `last first` orderings, plus title, all UTF-8 lowercased on the server so the loop is a substring check.
+- **Selected speakers render as removable chips** above the input. Each chip carries a hidden `<input name="speaker_ids[]">` so the existing form-submit harvest in `sessions.js` just keeps working — the rest of the create/edit flow didn't have to change.
+- **Keyboard nav**: ↓/↑ moves through the dropdown, Enter selects the highlighted match, Esc closes the dropdown, Backspace on an empty input removes the last chip.
+- **Edit mode pre-fills** existing speakers as chips. New session starts with no chips.
+
+### Internal
+- The server still queries all speakers for the event (cheap, one query, already needed for the legacy grid). Instead of rendering them as 163 `<label>` elements it emits one `<script type="application/json">` with `{ id, name, search }` per speaker. The autocomplete reads that blob into memory once.
+- The `default_role_id` dropdown beside the picker is untouched — same behaviour: pick a role, it applies to every selected speaker on save (per-speaker overrides remain in the original session-roles flow).
+
+### Note — Active Event dropdown (B-bundle item #1)
+That feature has been shipping since v0.2.0. The partial at `admin/views/partials/active-event-bar.php` is rendered by Speakers, Days, Venues, Sessions, and Export-Import admin pages; when more than one event exists, the bar shows a `<select>` and `admin-common.js` calls `digitone_events_event_set_active` on change, then reloads. If you're only seeing the static "Active event: …" line, it's because there's currently only one event in the database — create a second one and the dropdown appears.
+
 ## [0.8.7] - 2026-05-13
 
 ### Added — Speakers shortcode now has search + role filter (A-bundle finale)
@@ -256,6 +274,24 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.8] - 2026-05-13
+
+### Changed — Speaker picker in session modal is now an autocomplete
+
+The old picker was a flat checkbox grid of every speaker on the event. Workable with 10 speakers, painful with 50, unusable with 163 (the IAAS 2026 roster). Picking "Karlović Zoran" meant scrolling alphabetically through a grid that didn't fit the modal. Replaced with:
+
+- **Type-to-find input** with a dropdown of matching speakers (top 10). Matches both `first last` and `last first` orderings, plus title, all UTF-8 lowercased on the server so the loop is a substring check.
+- **Selected speakers render as removable chips** above the input. Each chip carries a hidden `<input name="speaker_ids[]">` so the existing form-submit harvest in `sessions.js` just keeps working — the rest of the create/edit flow didn't have to change.
+- **Keyboard nav**: ↓/↑ moves through the dropdown, Enter selects the highlighted match, Esc closes the dropdown, Backspace on an empty input removes the last chip.
+- **Edit mode pre-fills** existing speakers as chips. New session starts with no chips.
+
+### Internal
+- The server still queries all speakers for the event (cheap, one query, already needed for the legacy grid). Instead of rendering them as 163 `<label>` elements it emits one `<script type="application/json">` with `{ id, name, search }` per speaker. The autocomplete reads that blob into memory once.
+- The `default_role_id` dropdown beside the picker is untouched — same behaviour: pick a role, it applies to every selected speaker on save (per-speaker overrides remain in the original session-roles flow).
+
+### Note — Active Event dropdown (B-bundle item #1)
+That feature has been shipping since v0.2.0. The partial at `admin/views/partials/active-event-bar.php` is rendered by Speakers, Days, Venues, Sessions, and Export-Import admin pages; when more than one event exists, the bar shows a `<select>` and `admin-common.js` calls `digitone_events_event_set_active` on change, then reloads. If you're only seeing the static "Active event: …" line, it's because there's currently only one event in the database — create a second one and the dropdown appears.
 
 ## [0.8.7] - 2026-05-13
 

@@ -209,20 +209,42 @@ foreach ( $venues_tree as $v ) {
 
 			<div class="de-field">
 				<span><?php esc_html_e( 'Speakers', 'digitone-events' ); ?></span>
-				<div class="de-speakers-checkboxes">
-					<?php if ( empty( $speakers ) ) : ?>
-						<p class="de-muted"><?php esc_html_e( 'No speakers yet. Add some on the Speakers page.', 'digitone-events' ); ?></p>
-					<?php else : ?>
-						<?php foreach ( $speakers as $sp ) :
-							$name = trim( ( $sp['title_name'] ?? '' ) . ' ' . $sp['first_name'] . ' ' . $sp['last_name'] );
+				<?php if ( empty( $speakers ) ) : ?>
+					<p class="de-muted"><?php esc_html_e( 'No speakers yet. Add some on the Speakers page.', 'digitone-events' ); ?></p>
+				<?php else : ?>
+					<div class="de-speakers-autocomplete" data-de-speakers-ac>
+						<div class="de-speakers-chips" data-de-chips></div>
+						<div class="de-speakers-input-wrap">
+							<input
+								type="text"
+								class="de-speakers-input"
+								data-de-speakers-input
+								placeholder="<?php esc_attr_e( 'Type a name to find speakers…', 'digitone-events' ); ?>"
+								autocomplete="off">
+							<ul class="de-speakers-dropdown" data-de-dropdown role="listbox" hidden></ul>
+						</div>
+						<?php
+						// Embed speakers as JSON for client-side filtering — lowercased
+						// once here so the autocomplete loop is a substring check only.
+						$speaker_index = [];
+						foreach ( $speakers as $sp ) {
+							$first      = (string) ( $sp['first_name'] ?? '' );
+							$last       = (string) ( $sp['last_name']  ?? '' );
+							$title_name = (string) ( $sp['title_name'] ?? '' );
+							$name       = trim( $title_name . ' ' . $first . ' ' . $last );
+							$speaker_index[] = [
+								'id'         => (string) $sp['id'],
+								'name'       => $name,
+								'search'     => mb_strtolower(
+									$first . ' ' . $last . ' ' . $last . ' ' . $first . ' ' . $title_name,
+									'UTF-8'
+								),
+							];
+						}
 						?>
-							<label class="de-speaker-checkbox">
-								<input type="checkbox" name="speaker_ids[]" value="<?php echo esc_attr( $sp['id'] ); ?>">
-								<span><?php echo esc_html( $name ); ?></span>
-							</label>
-						<?php endforeach; ?>
-					<?php endif; ?>
-				</div>
+						<script type="application/json" data-de-speakers-data><?php echo wp_json_encode( $speaker_index ); ?></script>
+					</div>
+				<?php endif; ?>
 			</div>
 
 			<label class="de-field">
