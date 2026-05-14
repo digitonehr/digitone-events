@@ -55,6 +55,9 @@ foreach ( $venues_tree as $v ) {
 			<button type="button" class="button button-primary" data-de-action="open-create-session">
 				<?php esc_html_e( '+ Add session', 'digitone-events' ); ?>
 			</button>
+			<button type="button" class="button" data-de-action="open-csv-import">
+				<?php esc_html_e( 'Import CSV…', 'digitone-events' ); ?>
+			</button>
 			<button type="button" class="button" data-de-action="bulk-delete-sessions" disabled>
 				<?php esc_html_e( 'Delete selected', 'digitone-events' ); ?>
 			</button>
@@ -285,4 +288,66 @@ foreach ( $venues_tree as $v ) {
 			<button type="submit" class="button button-primary"><?php esc_html_e( 'Save session', 'digitone-events' ); ?></button>
 		</footer>
 	</form>
+</dialog>
+
+<?php
+/* ============================================================
+ * CSV IMPORT MODAL (v0.8.9)
+ *
+ * Two-state UI: file-picker → result panel. AJAX upload to
+ * `wp_ajax_digitone_events_session_csv_import`. Active event is read
+ * from the page wrapper's data-active-event attribute by sessions.js.
+ * ============================================================ */
+?>
+<dialog class="de-modal de-csv-import-modal" data-de-csv-modal>
+	<header class="de-modal-header">
+		<h2 class="de-modal-title"><?php esc_html_e( 'Import sessions from CSV', 'digitone-events' ); ?></h2>
+		<button type="button" class="de-modal-close" data-de-action="close-csv-modal" aria-label="Close">×</button>
+	</header>
+	<div class="de-modal-body">
+		<div class="de-csv-step de-csv-step-upload" data-de-csv-step="upload">
+			<p>
+				<?php esc_html_e( 'Upload a UTF-8 CSV with a header row. Columns:', 'digitone-events' ); ?>
+			</p>
+			<p><code>day, start_time, end_time, title, session_type, venue, sub_venue, speakers, default_role, description</code></p>
+			<ul class="de-csv-hints">
+				<li><?php esc_html_e( '"day" must be YYYY-MM-DD and match an existing day for the active event.', 'digitone-events' ); ?></li>
+				<li><?php esc_html_e( '"venue", "session_type", "default_role", and speaker names match the event\'s existing data (case-insensitive). Anything not found makes the row skip.', 'digitone-events' ); ?></li>
+				<li><?php esc_html_e( '"speakers" can list multiple names separated by ";" — e.g. "Ana Bosak Veršić; Gamal Eldin Mohamed".', 'digitone-events' ); ?></li>
+				<li><?php esc_html_e( '"sub_venue" is optional; if given it must exist under the named "venue".', 'digitone-events' ); ?></li>
+				<li><?php esc_html_e( 'All imported sessions are created as master-level. Child / parent relationships are not handled by the CSV importer — edit individual sessions to set those up.', 'digitone-events' ); ?></li>
+			</ul>
+			<p>
+				<button type="button" class="button button-link" data-de-action="download-csv-template">
+					<?php esc_html_e( '↓ Download sample CSV', 'digitone-events' ); ?>
+				</button>
+			</p>
+			<div class="de-csv-file-picker">
+				<input type="file" accept=".csv,text/csv" data-de-csv-file>
+				<p class="description"><?php esc_html_e( 'Max 5 MB.', 'digitone-events' ); ?></p>
+			</div>
+		</div>
+
+		<div class="de-csv-step de-csv-step-result" data-de-csv-step="result" hidden>
+			<div class="de-csv-summary" data-de-csv-summary></div>
+			<div class="de-csv-errors-wrap" data-de-csv-errors-wrap hidden>
+				<h4><?php esc_html_e( 'Skipped rows', 'digitone-events' ); ?></h4>
+				<table class="wp-list-table widefat striped de-csv-errors-table">
+					<thead>
+						<tr>
+							<th class="de-col-narrow"><?php esc_html_e( 'Row', 'digitone-events' ); ?></th>
+							<th><?php esc_html_e( 'Reason', 'digitone-events' ); ?></th>
+						</tr>
+					</thead>
+					<tbody data-de-csv-errors></tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+	<footer class="de-modal-footer">
+		<button type="button" class="button" data-de-action="close-csv-modal"><?php esc_html_e( 'Close', 'digitone-events' ); ?></button>
+		<button type="button" class="button button-primary" data-de-action="run-csv-import" data-de-csv-step="upload">
+			<?php esc_html_e( 'Import', 'digitone-events' ); ?>
+		</button>
+	</footer>
 </dialog>

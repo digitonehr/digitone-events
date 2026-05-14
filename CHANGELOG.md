@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-05-13
+
+### Added — Bulk CSV import for sessions
+
+Sessions admin page → header → new **"Import CSV…"** button next to "+ Add session". Opens a modal that takes a UTF-8 CSV with a header row and bulk-creates one session per data row in the active event.
+
+#### Columns
+`day, start_time, end_time, title, session_type, venue, sub_venue, speakers, default_role, description`
+
+- `day` is `YYYY-MM-DD` (also accepts `dd.mm.yyyy` and `dd/mm/yyyy`); must match an existing day for the active event.
+- `start_time` / `end_time` are `HH:MM` (24-hour).
+- `title` is required; other columns may be blank.
+- `session_type`, `venue`, `sub_venue`, `default_role` are name-based lookups against the event's own data. Case-insensitive on a UTF-8 fold (so "lecture" matches "Lecture", "Hala A" matches "hala a", etc.). Anything that doesn't resolve marks the row as skipped with a reason.
+- `speakers` is semicolon-separated `First Last` (or `Last First` — both orderings match). Unknown names abort the row with the unresolved names listed.
+- `sub_venue` is optional but if given must exist under the named `venue`.
+- All imported sessions are master-level. Child/parent relationships are not handled here — set those up by editing the individual session after import.
+
+#### Flow
+1. Pick a `.csv` file (max 5 MB).
+2. Click Import. The whole file is parsed server-side, every row is resolved against name-to-id caches built once per import, and valid rows are inserted via the standard `sessions_repo->save()` (so uuid generation, speaker junction-table sync, time validation all run unchanged).
+3. The modal switches to a result panel: `N imported, M skipped (of T rows)` with a table of skipped-row reasons. If anything was imported, closing the modal triggers a list reload so the new sessions appear.
+
+The modal also has a **"↓ Download sample CSV"** button that produces a client-side blob with three example rows, including a multi-speaker example. No server round-trip for the template.
+
+### Internal
+- New class `DigitOne_Events_Sessions_Csv_Importer` in `modules/sessions/class-sessions-csv-importer.php` — autoloaded by name. Parses CSV via PHP's `fgetcsv` over `php://memory` so quoted fields with embedded commas work. Detects `;` vs `,` delimiter from the header line. Strips UTF-8 BOM if present.
+- New AJAX endpoint `digitone_events_session_csv_import` in `modules/sessions/class-sessions-ajax.php`. Caps-check + nonce, 5 MB upload limit, `.csv` extension only. Returns `{ imported, skipped, errors:[{row,reason}], created:[ids] }`.
+- Modal HTML appended to `modules/sessions/views/tab-sessions.php`; JS lives at the end of `initSessionsTab()` in `assets/js/modules/sessions.js`; CSS in `assets/css/modules/sessions.css`.
+
 ## [0.8.8] - 2026-05-13
 
 ### Changed — Speaker picker in session modal is now an autocomplete
@@ -274,6 +303,35 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.9] - 2026-05-13
+
+### Added — Bulk CSV import for sessions
+
+Sessions admin page → header → new **"Import CSV…"** button next to "+ Add session". Opens a modal that takes a UTF-8 CSV with a header row and bulk-creates one session per data row in the active event.
+
+#### Columns
+`day, start_time, end_time, title, session_type, venue, sub_venue, speakers, default_role, description`
+
+- `day` is `YYYY-MM-DD` (also accepts `dd.mm.yyyy` and `dd/mm/yyyy`); must match an existing day for the active event.
+- `start_time` / `end_time` are `HH:MM` (24-hour).
+- `title` is required; other columns may be blank.
+- `session_type`, `venue`, `sub_venue`, `default_role` are name-based lookups against the event's own data. Case-insensitive on a UTF-8 fold (so "lecture" matches "Lecture", "Hala A" matches "hala a", etc.). Anything that doesn't resolve marks the row as skipped with a reason.
+- `speakers` is semicolon-separated `First Last` (or `Last First` — both orderings match). Unknown names abort the row with the unresolved names listed.
+- `sub_venue` is optional but if given must exist under the named `venue`.
+- All imported sessions are master-level. Child/parent relationships are not handled here — set those up by editing the individual session after import.
+
+#### Flow
+1. Pick a `.csv` file (max 5 MB).
+2. Click Import. The whole file is parsed server-side, every row is resolved against name-to-id caches built once per import, and valid rows are inserted via the standard `sessions_repo->save()` (so uuid generation, speaker junction-table sync, time validation all run unchanged).
+3. The modal switches to a result panel: `N imported, M skipped (of T rows)` with a table of skipped-row reasons. If anything was imported, closing the modal triggers a list reload so the new sessions appear.
+
+The modal also has a **"↓ Download sample CSV"** button that produces a client-side blob with three example rows, including a multi-speaker example. No server round-trip for the template.
+
+### Internal
+- New class `DigitOne_Events_Sessions_Csv_Importer` in `modules/sessions/class-sessions-csv-importer.php` — autoloaded by name. Parses CSV via PHP's `fgetcsv` over `php://memory` so quoted fields with embedded commas work. Detects `;` vs `,` delimiter from the header line. Strips UTF-8 BOM if present.
+- New AJAX endpoint `digitone_events_session_csv_import` in `modules/sessions/class-sessions-ajax.php`. Caps-check + nonce, 5 MB upload limit, `.csv` extension only. Returns `{ imported, skipped, errors:[{row,reason}], created:[ids] }`.
+- Modal HTML appended to `modules/sessions/views/tab-sessions.php`; JS lives at the end of `initSessionsTab()` in `assets/js/modules/sessions.js`; CSS in `assets/css/modules/sessions.css`.
 
 ## [0.8.8] - 2026-05-13
 
