@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-05-14
+
+### Fixed — Excel preview falsely flagged every speaker and session as "will insert"
+
+Three separate bugs were stacking so that the incremental-mode dedup never matched existing speakers (159 false positives + 4 errors) or existing sessions (57 false positives):
+
+1. **Speakers natural-key format mismatch**. `prime_caches()` was building keys as `"ana veršić"` (space-separated full name), but the dedup check via `natural_key()` was producing `"ana|veršić"` (pipe-separated, per the natural_key schema). They could never match.
+2. **Sessions cache was never primed**. There was no loop populating `caches['sessions']['by_nk']` from existing sessions — so every imported session looked brand new.
+3. **Time-format mismatch**. Existing sessions hold `start_time` as `HH:MM:SS` (MySQL TIME), the Excel template uses `HH:MM`. Even with the cache primed, the keys wouldn't have matched.
+
+Replaced the ad-hoc key building with a single source of truth, `natural_key_for( $entity_key, $row )`, used both when priming caches from the DB and when checking imported rows. The function handles per-field normalisation (currently: trimming `:SS` off session times) so the two sides always speak the same language. Speakers also keep a separate `by_name` cache (space-separated, both orderings) that the sessions importer uses for FK lookup of speakers by full name — that was the original purpose of the space-keyed cache and it's still needed.
+
+### Added — Auto-fill for blank sort_order and color columns
+
+If the Excel cell is blank or `0`, the importer now fills these in instead of inserting a row with defaults that look broken:
+
+- **sort_order**: assigned the next free integer (max existing + 1, then +2, +3…). Insertion order in Excel becomes display order, which is what you'd expect.
+- **color** (Roles and Session-Types only): cycles through an 8-colour palette, picking up where the existing data left off so new entries land in unused palette slots first.
+
+If you do fill the cell in Excel, your value wins — auto-fill only kicks in for blank cells. The `icon` column for Session-Types is left blank if not provided; pick one later from the Session Types admin tab.
+
 ## [0.9.1] - 2026-05-14
 
 ### Fixed — Excel snapshot / preview / commit threw PHP fatal
@@ -351,6 +372,27 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.9.2] - 2026-05-14
+
+### Fixed — Excel preview falsely flagged every speaker and session as "will insert"
+
+Three separate bugs were stacking so that the incremental-mode dedup never matched existing speakers (159 false positives + 4 errors) or existing sessions (57 false positives):
+
+1. **Speakers natural-key format mismatch**. `prime_caches()` was building keys as `"ana veršić"` (space-separated full name), but the dedup check via `natural_key()` was producing `"ana|veršić"` (pipe-separated, per the natural_key schema). They could never match.
+2. **Sessions cache was never primed**. There was no loop populating `caches['sessions']['by_nk']` from existing sessions — so every imported session looked brand new.
+3. **Time-format mismatch**. Existing sessions hold `start_time` as `HH:MM:SS` (MySQL TIME), the Excel template uses `HH:MM`. Even with the cache primed, the keys wouldn't have matched.
+
+Replaced the ad-hoc key building with a single source of truth, `natural_key_for( $entity_key, $row )`, used both when priming caches from the DB and when checking imported rows. The function handles per-field normalisation (currently: trimming `:SS` off session times) so the two sides always speak the same language. Speakers also keep a separate `by_name` cache (space-separated, both orderings) that the sessions importer uses for FK lookup of speakers by full name — that was the original purpose of the space-keyed cache and it's still needed.
+
+### Added — Auto-fill for blank sort_order and color columns
+
+If the Excel cell is blank or `0`, the importer now fills these in instead of inserting a row with defaults that look broken:
+
+- **sort_order**: assigned the next free integer (max existing + 1, then +2, +3…). Insertion order in Excel becomes display order, which is what you'd expect.
+- **color** (Roles and Session-Types only): cycles through an 8-colour palette, picking up where the existing data left off so new entries land in unused palette slots first.
+
+If you do fill the cell in Excel, your value wins — auto-fill only kicks in for blank cells. The `icon` column for Session-Types is left blank if not provided; pick one later from the Session Types admin tab.
 
 ## [0.9.1] - 2026-05-14
 

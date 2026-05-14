@@ -107,6 +107,28 @@ final class DigitOne_Events_Export_Import_Excel {
 	];
 
 	/**
+	 * Palette for auto-generated entity colours. Matches the agenda palette
+	 * roughly so role / session-type chips stay visually consistent with the
+	 * frontend. Cycled by the priming color counter — see prime_caches().
+	 */
+	public const COLOR_PALETTE = [
+		'#2563eb', // blue
+		'#db2777', // pink
+		'#0d9488', // teal
+		'#ea580c', // orange
+		'#7c3aed', // purple
+		'#dc2626', // red
+		'#16a34a', // green
+		'#0891b2', // cyan
+	];
+
+	/** Entities that store an integer sort_order (auto-filled when blank). */
+	private const HAS_SORT_ORDER = [ 'titles', 'roles', 'session_types', 'venues', 'sub_venues', 'days' ];
+
+	/** Entities that store a colour (auto-filled from COLOR_PALETTE when blank). */
+	private const HAS_COLOR = [ 'roles', 'session_types' ];
+
+	/**
 	 * Build a JSON dump of the active event's current data in the same
 	 * shape the importer accepts. Used by both the "Download Excel" button
 	 * (client-side renders this to .xlsx) and the "Download empty template"
@@ -310,7 +332,7 @@ final class DigitOne_Events_Export_Import_Excel {
 
 			// Natural key dedup (incremental mode only)
 			if ( $mode === 'incremental' ) {
-				$nk = $this->natural_key( $entity_key, $row );
+				$nk = $this->natural_key_for( $entity_key, $row );
 				if ( $nk !== '' && isset( $caches[ $entity_key ]['by_nk'][ $nk ] ) ) {
 					$skipped++;
 					continue;
@@ -401,9 +423,10 @@ final class DigitOne_Events_Export_Import_Excel {
 					'end_time'   => $this->normalize_time( (string) ( $row['end_time']   ?? '' ) ),
 					'sort_order' => (int) ( $row['sort_order'] ?? 0 ),
 				];
-				$nk = $this->fold( $date );
+				$this->apply_defaults( 'days', $data, $caches );
+				$nk = $this->natural_key_for( 'days', [ 'day_date' => $date ] );
 				if ( $dry_run ) {
-					$caches['days']['by_nk'][ $nk ] = '__pending__' . $nk;
+					$caches['days']['by_nk'][ $nk ] = '__pending__';
 					return [ 'ok' => true ];
 				}
 				$id = $plugin->module( 'days' )->repo()->save( $data );
@@ -439,26 +462,29 @@ final class DigitOne_Events_Export_Import_Excel {
 					'photo_url'  => trim( (string) ( $row['photo_url'] ?? '' ) ),
 					'role_ids'   => $role_ids,
 				];
-				$nk = $this->fold( $data['first_name'] . ' ' . $data['last_name'] );
+				$nk = $this->natural_key_for( 'speakers', $data );
+				$first_lc = $this->fold( $data['first_name'] );
+				$last_lc  = $this->fold( $data['last_name'] );
 				if ( $dry_run ) {
 					$caches['speakers']['by_nk'][ $nk ] = '__pending__';
+					$caches['speakers']['by_name'][ $first_lc . ' ' . $last_lc ] = '__pending__';
+					$caches['speakers']['by_name'][ $last_lc . ' ' . $first_lc ] = '__pending__';
 					return [ 'ok' => true ];
 				}
 				$id = $plugin->module( 'speakers' )->repo()->save( $data );
 				if ( ! $id ) return [ 'error' => __( 'Database rejected speaker row.', 'digitone-events' ) ];
 				$caches['speakers']['by_nk'][ $nk ] = $id;
+				$caches['speakers']['by_name'][ $first_lc . ' ' . $last_lc ] = $id;
+				$caches['speakers']['by_name'][ $last_lc . ' ' . $first_lc ] = $id;
 				return [ 'ok' => true ];
 
 			case 'sessions':
 				$date = $this->normalize_date( (string) $row['day_date'] );
 				if ( ! $date ) return [ 'error' => __( 'Bad day_date (use YYYY-MM-DD).', 'digitone-events' ) ];
-				$day_id = $caches['days']['by_nk'][ $this->fold( $date ) ] ?? null;
-				if ( ! $day_id || strpos( (string) $day_id, '__pending__' ) === 0 ) {
-					if ( $dry_run && $day_id ) {
-						// preview: parent will be created on commit, so just continue with placeholder
-					} else if ( ! $day_id ) {
-						return [ 'error' => sprintf( /* translators: %s date */ __( 'Day "%s" not found.', 'digitone-events' ), $date ) ];
-					}
+				$day_id = $caches['days']['by_nk'][ $this->natural_key_for( 'days', [ 'day_date' => $date ] ) ] ?? null;
+				if ( ! $day_id ) return [ 'error' => sprintf( /* translators: %s date */ __( 'Day "%s" not found.', 'digitone-events' ), $date ) ];
+				if ( strpos( (string) $day_id, '__pending__' ) === 0 && ! $dry_run ) {
+					return [ 'error' => sprintf( /* translators: %s date */ __( 'Day "%s" is queued but not yet saved.', 'digitone-events' ), $date ) ];
 				}
 				$start_norm = $this->normalize_time( (string) $row['start_time'] );
 				$end_norm   = $this->normalize_time( (string) $row['end_time'] );
@@ -475,7 +501,7 @@ final class DigitOne_Events_Export_Import_Excel {
 				$sub_name = trim( (string) ( $row['sub_venue'] ?? '' ) );
 				$sub_id   = null;
 				if ( $sub_name !== '' ) {
-					$sub_nk = $this->fold( $sub_name . '|' . $venue_name );
+					$sub_nk = $this->natural_key_for( 'sub_venues', [ 'name' => $sub_name, 'parent_venue' => $venue_name ] );
 					$sub_id = $caches['sub_venues']['by_nk'][ $sub_nk ] ?? null;
 					if ( ! $sub_id ) return [ 'error' => sprintf( /* translators: %s sub */ __( 'Sub-venue "%s" not found.', 'digitone-events' ), $sub_name ) ];
 				}
@@ -485,15 +511,7 @@ final class DigitOne_Events_Export_Import_Excel {
 				if ( ! empty( $row['speakers'] ) ) {
 					$parts = array_filter( array_map( 'trim', preg_split( '/[;|]/', (string) $row['speakers'] ) ?: [] ) );
 					foreach ( $parts as $nm ) {
-						$sid = $caches['speakers']['by_nk'][ $this->fold( $nm ) ] ?? null;
-						if ( ! $sid ) {
-							// Try reverse "Last First" → look up reversed
-							$tokens = preg_split( '/\s+/', $nm );
-							if ( $tokens && count( $tokens ) >= 2 ) {
-								$rev = end( $tokens ) . ' ' . trim( str_replace( end( $tokens ), '', $nm ) );
-								$sid = $caches['speakers']['by_nk'][ $this->fold( $rev ) ] ?? null;
-							}
-						}
+						$sid = $caches['speakers']['by_name'][ $this->fold( $nm ) ] ?? null;
 						if ( $sid ) $speaker_ids[] = $sid;
 						else        $unresolved[]  = $nm;
 					}
@@ -524,6 +542,12 @@ final class DigitOne_Events_Export_Import_Excel {
 					'speaker_role_map' => (object) [],
 				] );
 				if ( ! $session_id ) return [ 'error' => __( 'Database rejected session row.', 'digitone-events' ) ];
+				$sess_nk = $this->natural_key_for( 'sessions', [
+					'day_date'   => $date,
+					'start_time' => $start_norm,
+					'title'      => trim( (string) $row['title'] ),
+				] );
+				$caches['sessions']['by_nk'][ $sess_nk ] = $session_id;
 				return [ 'ok' => true ];
 		}
 
@@ -531,7 +555,8 @@ final class DigitOne_Events_Export_Import_Excel {
 	}
 
 	private function commit_simple( string $entity_key, $repo, array $data, bool $dry_run, array &$caches ) : array {
-		$nk = $this->fold( (string) $data['name'] );
+		$this->apply_defaults( $entity_key, $data, $caches );
+		$nk = $this->natural_key_for( $entity_key, $data );
 		if ( $dry_run ) {
 			$caches[ $entity_key ]['by_nk'][ $nk ] = '__pending__';
 			return [ 'ok' => true ];
@@ -543,7 +568,8 @@ final class DigitOne_Events_Export_Import_Excel {
 	}
 
 	private function commit_subvenue( array $row, array $data, string $parent_name, bool $dry_run, array &$caches ) : array {
-		$nk = $this->fold( $data['name'] . '|' . $parent_name );
+		$this->apply_defaults( 'sub_venues', $data, $caches );
+		$nk = $this->natural_key_for( 'sub_venues', [ 'name' => $data['name'], 'parent_venue' => $parent_name ] );
 		if ( $dry_run ) {
 			$caches['sub_venues']['by_nk'][ $nk ] = '__pending__';
 			return [ 'ok' => true ];
@@ -556,57 +582,157 @@ final class DigitOne_Events_Export_Import_Excel {
 
 	/**
 	 * Build name→id caches for every entity, so resolving FKs and dedup
-	 * by natural key is in-memory only.
+	 * by natural key is in-memory only. Same `natural_key_for()` function
+	 * shapes the keys here as the dedup check uses, so existing rows
+	 * actually match imported rows (they didn't before — that's why 159
+	 * speakers and 57 sessions all showed up as "will insert").
+	 *
+	 * Also pre-computes `next_order` (max existing sort_order + 1) and
+	 * `color_idx` (how many palette slots are already in use) per entity,
+	 * so blank sort_order / color columns can be auto-filled at insert
+	 * time without re-querying the DB.
 	 */
 	private function prime_caches( string $event_id ) : array {
 		$plugin = DigitOne_Events_Plugin::instance();
 		$caches = [];
 
-		$caches['titles']['by_nk']        = [];
+		// Init every bucket so callers can ++ without checking.
+		foreach ( self::IMPORT_ORDER as $ek ) {
+			$caches[ $ek ] = [
+				'by_nk'      => [],
+				'next_order' => 1,
+				'color_idx'  => 0,
+			];
+		}
+		$caches['speakers']['by_name'] = []; // FK lookup helper (used by sessions)
+
+		// --- Titles ---
 		foreach ( $plugin->module( 'titles' )->repo()->all_for_event( $event_id ) as $t ) {
-			$caches['titles']['by_nk'][ $this->fold( $t['name'] ) ] = $t['id'];
+			$nk = $this->natural_key_for( 'titles', [ 'name' => (string) ( $t['name'] ?? '' ) ] );
+			$caches['titles']['by_nk'][ $nk ] = $t['id'];
+			$caches['titles']['next_order'] = max( $caches['titles']['next_order'], (int) ( $t['sort_order'] ?? 0 ) + 1 );
 		}
 
-		$caches['roles']['by_nk'] = [];
+		// --- Roles ---
 		foreach ( $plugin->module( 'roles' )->repo()->all_for_event( $event_id ) as $r ) {
-			$caches['roles']['by_nk'][ $this->fold( $r['name'] ) ] = $r['id'];
+			$nk = $this->natural_key_for( 'roles', [ 'name' => (string) ( $r['name'] ?? '' ) ] );
+			$caches['roles']['by_nk'][ $nk ] = $r['id'];
+			$caches['roles']['next_order']   = max( $caches['roles']['next_order'], (int) ( $r['sort_order'] ?? 0 ) + 1 );
+			if ( ! empty( $r['color'] ) ) $caches['roles']['color_idx']++;
 		}
 
-		$caches['session_types']['by_nk'] = [];
+		// --- Session-Types ---
 		foreach ( $plugin->module( 'session_types' )->repo()->all_for_event( $event_id ) as $t ) {
-			$caches['session_types']['by_nk'][ $this->fold( $t['name'] ) ] = $t['id'];
+			$nk = $this->natural_key_for( 'session_types', [ 'name' => (string) ( $t['name'] ?? '' ) ] );
+			$caches['session_types']['by_nk'][ $nk ] = $t['id'];
+			$caches['session_types']['next_order']   = max( $caches['session_types']['next_order'], (int) ( $t['sort_order'] ?? 0 ) + 1 );
+			if ( ! empty( $t['color'] ) ) $caches['session_types']['color_idx']++;
 		}
 
+		// --- Venues + Sub-Venues ---
 		$tree = $plugin->module( 'venues' )->repo()->tree_for_event( $event_id );
-		$caches['venues']['by_nk']     = [];
-		$caches['sub_venues']['by_nk'] = [];
 		foreach ( $tree as $v ) {
-			$caches['venues']['by_nk'][ $this->fold( $v['name'] ) ] = $v['id'];
+			$nk = $this->natural_key_for( 'venues', [ 'name' => (string) ( $v['name'] ?? '' ) ] );
+			$caches['venues']['by_nk'][ $nk ] = $v['id'];
+			$caches['venues']['next_order']   = max( $caches['venues']['next_order'], (int) ( $v['sort_order'] ?? 0 ) + 1 );
+
 			foreach ( (array) ( $v['sub_venues'] ?? [] ) as $sub ) {
-				$caches['sub_venues']['by_nk'][ $this->fold( $sub['name'] . '|' . $v['name'] ) ] = $sub['id'];
+				$nk = $this->natural_key_for( 'sub_venues', [
+					'name'         => (string) ( $sub['name'] ?? '' ),
+					'parent_venue' => (string) ( $v['name'] ?? '' ),
+				] );
+				$caches['sub_venues']['by_nk'][ $nk ] = $sub['id'];
+				$caches['sub_venues']['next_order']   = max( $caches['sub_venues']['next_order'], (int) ( $sub['sort_order'] ?? 0 ) + 1 );
 			}
 		}
 
-		$caches['days']['by_nk'] = [];
-		foreach ( $plugin->module( 'days' )->repo()->all_for_event( $event_id ) as $d ) {
-			$caches['days']['by_nk'][ $this->fold( $d['day_date'] ) ] = $d['id'];
+		// --- Days ---
+		$days_list = $plugin->module( 'days' )->repo()->all_for_event( $event_id );
+		foreach ( $days_list as $d ) {
+			$nk = $this->natural_key_for( 'days', [ 'day_date' => (string) ( $d['day_date'] ?? '' ) ] );
+			$caches['days']['by_nk'][ $nk ] = $d['id'];
+			$caches['days']['next_order']   = max( $caches['days']['next_order'], (int) ( $d['sort_order'] ?? 0 ) + 1 );
 		}
 
-		$caches['speakers']['by_nk'] = [];
+		// --- Speakers --- by_nk for dedup, by_name for sessions-FK lookup
 		foreach ( $plugin->module( 'speakers' )->repo()->all_for_event( $event_id ) as $sp ) {
-			$caches['speakers']['by_nk'][ $this->fold( $sp['first_name'] . ' ' . $sp['last_name'] ) ] = $sp['id'];
-			$caches['speakers']['by_nk'][ $this->fold( $sp['last_name']  . ' ' . $sp['first_name'] ) ] = $sp['id'];
+			$first = (string) ( $sp['first_name'] ?? '' );
+			$last  = (string) ( $sp['last_name']  ?? '' );
+			$nk = $this->natural_key_for( 'speakers', [ 'first_name' => $first, 'last_name' => $last ] );
+			$caches['speakers']['by_nk'][ $nk ] = $sp['id'];
+
+			$first_lc = $this->fold( $first );
+			$last_lc  = $this->fold( $last );
+			$caches['speakers']['by_name'][ $first_lc . ' ' . $last_lc ] = $sp['id'];
+			$caches['speakers']['by_name'][ $last_lc . ' ' . $first_lc ] = $sp['id'];
+		}
+
+		// --- Sessions --- existing rows must be discoverable for dedup,
+		// otherwise every re-imported session would look brand-new.
+		$sessions_repo = $plugin->module( 'sessions' )->repo();
+		foreach ( $days_list as $d ) {
+			$sessions = $sessions_repo->all_for_day( $d['id'] );
+			foreach ( $sessions as $s ) {
+				$nk = $this->natural_key_for( 'sessions', [
+					'day_date'   => (string) ( $d['day_date']   ?? '' ),
+					'start_time' => (string) ( $s['start_time'] ?? '' ),
+					'title'      => (string) ( $s['title']      ?? '' ),
+				] );
+				$caches['sessions']['by_nk'][ $nk ] = $s['id'];
+			}
 		}
 
 		return $caches;
 	}
 
-	private function natural_key( string $entity_key, array $row ) : string {
+	/**
+	 * Canonical natural-key builder. Single source of truth — used both
+	 * when priming caches from existing data and when checking imported
+	 * rows for dedup. Anything that needs per-field normalization (like
+	 * stripping seconds off `HH:MM:SS` so it matches an Excel-shaped
+	 * `HH:MM`) is centralised here.
+	 */
+	private function natural_key_for( string $entity_key, array $row ) : string {
 		$parts = [];
 		foreach ( self::ENTITIES[ $entity_key ]['natural_key'] as $field ) {
-			$parts[] = $this->fold( (string) ( $row[ $field ] ?? '' ) );
+			$v = (string) ( $row[ $field ] ?? '' );
+
+			// Sessions: existing rows hold start_time as HH:MM:SS while the
+			// Excel template uses HH:MM. Trim to HH:MM either way so the
+			// keys match.
+			if ( $entity_key === 'sessions' && $field === 'start_time' ) {
+				$v = substr( $v, 0, 5 );
+			}
+
+			$parts[] = $this->fold( $v );
 		}
 		return implode( '|', $parts );
+	}
+
+	/**
+	 * Auto-fill blank `sort_order` and `color` columns at insert time.
+	 *
+	 *   - sort_order: assigned the next free integer, so insertion order
+	 *     in Excel becomes the display order. Counter starts at max
+	 *     existing + 1 (computed during prime_caches).
+	 *   - color (roles + session_types only): cycles through COLOR_PALETTE
+	 *     starting from however many existing rows already have a colour.
+	 *
+	 * Operates on $data in place. Callers stay simple.
+	 */
+	private function apply_defaults( string $entity_key, array &$data, array &$caches ) : void {
+		if ( in_array( $entity_key, self::HAS_SORT_ORDER, true ) ) {
+			if ( ! isset( $data['sort_order'] ) || (int) $data['sort_order'] <= 0 ) {
+				$data['sort_order'] = $caches[ $entity_key ]['next_order']++;
+			}
+		}
+		if ( in_array( $entity_key, self::HAS_COLOR, true ) ) {
+			if ( empty( $data['color'] ) ) {
+				$palette = self::COLOR_PALETTE;
+				$data['color'] = $palette[ $caches[ $entity_key ]['color_idx'] % count( $palette ) ];
+				$caches[ $entity_key ]['color_idx']++;
+			}
+		}
 	}
 
 	private function fold( string $s ) : string {
