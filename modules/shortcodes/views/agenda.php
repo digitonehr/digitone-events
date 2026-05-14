@@ -193,6 +193,23 @@ $slot_minutes = 30;
 		</div>
 	</header>
 
+	<?php /* Now / Next widget (v0.9.3). Hidden by default; JS reveals it
+	         only when today is one of the event days. Populated entirely
+	         on the client from the .de-fe-session-data JSON below. */ ?>
+	<aside class="de-fe-now-next" data-de-now-next hidden aria-live="polite">
+		<div class="de-fe-now-next-slot de-fe-now-next-current" data-de-now-current hidden>
+			<span class="de-fe-now-next-label"><?php esc_html_e( 'Now', 'digitone-events' ); ?></span>
+			<div class="de-fe-now-next-body" data-de-now-body></div>
+		</div>
+		<div class="de-fe-now-next-slot de-fe-now-next-upcoming" data-de-now-next-slot hidden>
+			<span class="de-fe-now-next-label"><?php esc_html_e( 'Up next', 'digitone-events' ); ?></span>
+			<div class="de-fe-now-next-body" data-de-next-body></div>
+		</div>
+		<div class="de-fe-now-next-slot de-fe-now-next-prestart" data-de-now-prestart hidden>
+			<span class="de-fe-now-next-body" data-de-prestart-body></span>
+		</div>
+	</aside>
+
 	<?php if ( ! empty( $days ) ) : ?>
 		<nav class="de-fe-day-nav" role="tablist">
 			<?php foreach ( $days as $i => $d ) :
@@ -668,6 +685,10 @@ $slot_minutes = 30;
 	<?php
 	// Build a JSON map of session details for the detail modal.
 	$detail_map = [];
+	$days_index = []; // day_id => day_date  (for the Now/Next widget)
+	foreach ( $days as $d ) {
+		$days_index[ $d['id'] ] = $d['day_date'];
+	}
 	foreach ( $sessions_by_day as $day_id => $day_sessions ) {
 		foreach ( $day_sessions as $s ) {
 			if ( ! empty( $s['type_name'] ) && strtolower( $s['type_name'] ) === 'break' ) continue;
@@ -684,6 +705,7 @@ $slot_minutes = 30;
 			$detail_map[ $s['id'] ] = [
 				'title'          => $s['title'] ?? '',
 				'description'    => $s['description'] ?? '',
+				'day_date'       => $days_index[ $day_id ] ?? '',
 				'start_time'     => substr( (string) ( $s['start_time'] ?? '' ), 0, 5 ),
 				'end_time'       => substr( (string) ( $s['end_time']   ?? '' ), 0, 5 ),
 				'venue_name'     => $s['venue_name']     ?? '',

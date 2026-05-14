@@ -13,6 +13,7 @@
 		setupSessionModal( schedule );
 		setupFilters( schedule );
 		setupExportPdf( schedule );
+		setupNowNext( schedule );
 	}
 
 	/* ============================================================
@@ -101,7 +102,7 @@
 		function open( sessionId ) {
 			const session = dataMap[ sessionId ];
 			if ( ! session ) return;
-			body.innerHTML = renderModal( session );
+			body.innerHTML = renderModal( session, sessionId );
 			previousFocus = document.activeElement;
 			modal.hidden = false;
 			modal.setAttribute( 'aria-hidden', 'false' );
@@ -109,6 +110,15 @@
 			// Focus close button for accessibility
 			const closeBtn = modal.querySelector( '.de-fe-modal-close' );
 			if ( closeBtn ) closeBtn.focus();
+			// Update URL hash so the link can be copy-pasted from address bar too
+			try {
+				const want = '#session-' + sessionId;
+				if ( window.location.hash !== want ) {
+					history.replaceState( null, '', window.location.pathname + window.location.search + want );
+				}
+			} catch ( e ) { /* ignore */ }
+			// Wire up Copy link + QR buttons inside the freshly-rendered body
+			wireModalExtras( body, sessionId );
 		}
 
 		function close() {
@@ -152,9 +162,23 @@
 		document.addEventListener( 'keydown', function ( ev ) {
 			if ( ev.key === 'Escape' && ! modal.hidden ) close();
 		} );
+
+		/* Deep-link: #session-<id> in the URL opens that session on load
+		 * and whenever the hash changes (back/forward, paste). */
+		function openFromHash() {
+			const m = ( window.location.hash || '' ).match( /^#session-([\w-]+)$/ );
+			if ( ! m ) return;
+			if ( dataMap[ m[1] ] ) open( m[1] );
+		}
+		openFromHash();
+		window.addEventListener( 'hashchange', openFromHash );
+
+		/* Expose open() on the schedule element so other init steps
+		 * (Now/Next widget) can trigger the modal without re-querying. */
+		schedule.deOpenSession = open;
 	}
 
-	function renderModal( s ) {
+	function renderModal( s, sessionId ) {
 		const time = ( s.start_time || '' ) + ( s.end_time ? ' – ' + s.end_time : '' );
 		const venue = [ s.venue_name, s.sub_venue_name ].filter( Boolean ).join( ' / ' );
 		const typeLabel = [ s.type_icon, s.type_name ].filter( Boolean ).join( ' ' );
@@ -171,7 +195,8 @@
 		if ( venue ) html += '<span class="de-fe-modal-venue">' + escapeHtml( venue ) + '</span>';
 		html += '</div>';
 
-		// Add to calendar
+		// Action row (v0.9.3): Add-to-calendar + Copy link + QR toggle.
+		html += '<div class="de-fe-modal-actions">';
 		if ( s.ics_url ) {
 			html += '<a class="de-fe-modal-cal" href="' + escapeAttr( s.ics_url ) + '" download>'
 				+ '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -181,6 +206,24 @@
 				+ '<line x1="3" y1="10" x2="21" y2="10"></line>'
 				+ '</svg> Add to calendar</a>';
 		}
+		if ( sessionId ) {
+			html += '<button type="button" class="de-fe-modal-action" data-de-action="copy-link">'
+				+ '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+				+ '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>'
+				+ '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>'
+				+ '</svg> <span data-de-copy-label>Copy link</span></button>';
+			html += '<button type="button" class="de-fe-modal-action" data-de-action="toggle-qr" aria-expanded="false">'
+				+ '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+				+ '<rect x="3" y="3" width="7" height="7"></rect>'
+				+ '<rect x="14" y="3" width="7" height="7"></rect>'
+				+ '<rect x="3" y="14" width="7" height="7"></rect>'
+				+ '<path d="M14 14h3v3h-3z M17 17h4 M14 21h7 M21 14v3"></path>'
+				+ '</svg> QR code</button>';
+		}
+		html += '</div>';
+
+		// QR canvas container — rendered on first toggle.
+		html += '<div class="de-fe-modal-qr" data-de-qr hidden></div>';
 
 		// Description
 		if ( s.description ) {
@@ -222,6 +265,289 @@
 	}
 	function escapeAttr( s ) {
 		return escapeHtml( s );
+	}
+
+	/* ============================================================
+	 * Modal extras (v0.9.3): Copy link button + QR code toggle.
+	 *
+	 * Both share the same target URL — the page's current location with
+	 * a `#session-<id>` hash. Anyone visiting that URL lands with the
+	 * session modal already open (see openFromHash in setupSessionModal).
+	 *
+	 * QR rendering uses qrcode-generator lazy-loaded from cdnjs on first
+	 * click. ~10 KB, cached for subsequent clicks across all sessions.
+	 * ============================================================ */
+	const QRCODE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+
+	function deepLinkUrl( sessionId ) {
+		const base = window.location.origin + window.location.pathname + window.location.search;
+		return base + '#session-' + sessionId;
+	}
+
+	function wireModalExtras( body, sessionId ) {
+		const copyBtn = body.querySelector( '[data-de-action="copy-link"]' );
+		const qrBtn   = body.querySelector( '[data-de-action="toggle-qr"]' );
+		const qrBox   = body.querySelector( '[data-de-qr]' );
+
+		if ( copyBtn ) {
+			copyBtn.addEventListener( 'click', function () {
+				const url = deepLinkUrl( sessionId );
+				const label = copyBtn.querySelector( '[data-de-copy-label]' );
+				const finish = function ( ok ) {
+					if ( label ) {
+						label.textContent = ok ? 'Copied!' : 'Copy failed';
+						setTimeout( function () { label.textContent = 'Copy link'; }, 1500 );
+					}
+				};
+				if ( navigator.clipboard && navigator.clipboard.writeText ) {
+					navigator.clipboard.writeText( url ).then( function () { finish( true ); }, function () { finish( false ); } );
+				} else {
+					// Fallback: temporary textarea
+					try {
+						const ta = document.createElement( 'textarea' );
+						ta.value = url; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+						document.body.appendChild( ta );
+						ta.select();
+						const ok = document.execCommand( 'copy' );
+						document.body.removeChild( ta );
+						finish( ok );
+					} catch ( e ) { finish( false ); }
+				}
+			} );
+		}
+
+		if ( qrBtn && qrBox ) {
+			qrBtn.addEventListener( 'click', async function () {
+				const isOpen = ! qrBox.hidden;
+				if ( isOpen ) {
+					qrBox.hidden = true;
+					qrBtn.setAttribute( 'aria-expanded', 'false' );
+					return;
+				}
+				qrBox.hidden = false;
+				qrBtn.setAttribute( 'aria-expanded', 'true' );
+				if ( ! qrBox.dataset.rendered ) {
+					qrBox.innerHTML = '<span class="de-fe-modal-qr-loading">Generating QR…</span>';
+					try {
+						await loadScriptOnce( QRCODE_CDN );
+						const url = deepLinkUrl( sessionId );
+						const qr = window.qrcode( 0, 'M' );
+						qr.addData( url );
+						qr.make();
+						qrBox.innerHTML = qr.createImgTag( 5, 12 )
+							+ '<p class="de-fe-modal-qr-caption">Scan to open this session</p>';
+						qrBox.dataset.rendered = '1';
+					} catch ( e ) {
+						qrBox.innerHTML = '<p class="de-fe-modal-qr-error">Could not load QR library.</p>';
+					}
+				}
+			} );
+		}
+	}
+
+	/* ============================================================
+	 * Now / Next widget (v0.9.3).
+	 *
+	 * Shows on the agenda only when the device's local date matches
+	 * one of the event days. While running, ticks every 30 s and:
+	 *   - Highlights the "Now" session (within start/end window)
+	 *   - Surfaces the "Up next" session (earliest start_time > now)
+	 *   - On grid + mobile-list, adds .is-now to matching session blocks
+	 *
+	 * Outside event days we render a "Conference starts on <date>"
+	 * pre-start line so visiting the page before the event still gets
+	 * a useful confirmation.
+	 *
+	 * Time source = browser local time. On-site attendees with phones
+	 * set to the venue's timezone get correct results; remote viewers
+	 * in other timezones may see drift but the schedule itself is
+	 * unaffected.
+	 * ============================================================ */
+	function setupNowNext( schedule ) {
+		const widget   = schedule.querySelector( '[data-de-now-next]' );
+		const dataEl   = schedule.querySelector( '.de-fe-session-data' );
+		if ( ! widget || ! dataEl ) return;
+
+		let sessionMap = {};
+		try { sessionMap = JSON.parse( dataEl.textContent || '{}' ); }
+		catch ( e ) { return; }
+
+		// Flat list with session id baked in for easy iteration.
+		const sessions = Object.keys( sessionMap ).map( function ( id ) {
+			const s = sessionMap[ id ];
+			return {
+				id:         id,
+				day_date:   s.day_date   || '',
+				start_time: s.start_time || '',
+				end_time:   s.end_time   || '',
+				title:      s.title      || '',
+				type_name:  s.type_name  || '',
+				type_color: s.type_color || '#6b7280',
+				type_icon:  s.type_icon  || '',
+				venue:      [ s.venue_name, s.sub_venue_name ].filter( Boolean ).join( ' / ' ),
+			};
+		} ).filter( function ( s ) { return s.day_date && s.start_time; } );
+		if ( ! sessions.length ) return;
+
+		// Distinct event days, sorted ascending.
+		const eventDays = Array.from( new Set( sessions.map( function ( s ) { return s.day_date; } ) ) ).sort();
+		const firstDay  = eventDays[ 0 ];
+		const lastDay   = eventDays[ eventDays.length - 1 ];
+
+		const currentSlot  = widget.querySelector( '[data-de-now-current]' );
+		const nextSlot     = widget.querySelector( '[data-de-now-next-slot]' );
+		const prestartSlot = widget.querySelector( '[data-de-now-prestart]' );
+		const currentBody  = widget.querySelector( '[data-de-now-body]' );
+		const nextBody     = widget.querySelector( '[data-de-next-body]' );
+		const prestartBody = widget.querySelector( '[data-de-prestart-body]' );
+
+		function todayString() {
+			const d = new Date();
+			const p = function ( n ) { return ( n < 10 ? '0' : '' ) + n; };
+			return d.getFullYear() + '-' + p( d.getMonth() + 1 ) + '-' + p( d.getDate() );
+		}
+		function nowTimeString() {
+			const d = new Date();
+			const p = function ( n ) { return ( n < 10 ? '0' : '' ) + n; };
+			return p( d.getHours() ) + ':' + p( d.getMinutes() );
+		}
+		function timeToMinutes( hhmm ) {
+			const parts = ( hhmm || '' ).split( ':' );
+			if ( parts.length < 2 ) return 0;
+			return ( parseInt( parts[ 0 ], 10 ) || 0 ) * 60 + ( parseInt( parts[ 1 ], 10 ) || 0 );
+		}
+		function formatRange( start, end ) {
+			return ( start || '' ) + ( end ? ' – ' + end : '' );
+		}
+		function formatHumanDate( ymd ) {
+			const parts = ( ymd || '' ).split( '-' );
+			if ( parts.length !== 3 ) return ymd;
+			const d = new Date( parseInt( parts[0], 10 ), parseInt( parts[1], 10 ) - 1, parseInt( parts[2], 10 ) );
+			try {
+				return d.toLocaleDateString( undefined, { weekday: 'long', day: 'numeric', month: 'long' } );
+			} catch ( e ) { return ymd; }
+		}
+		function renderSession( s, minsRemaining ) {
+			let html = '<a class="de-fe-now-next-link" href="#session-' + escapeAttr( s.id ) + '" data-de-now-link="' + escapeAttr( s.id ) + '">';
+			if ( s.type_name ) {
+				html += '<span class="de-fe-now-next-type" style="color:' + escapeAttr( s.type_color ) + '">' + escapeHtml( [ s.type_icon, s.type_name ].filter( Boolean ).join( ' ' ) ) + '</span>';
+			}
+			html += '<span class="de-fe-now-next-title">' + escapeHtml( s.title ) + '</span>';
+			html += '<span class="de-fe-now-next-meta">' + escapeHtml( formatRange( s.start_time, s.end_time ) );
+			if ( s.venue ) html += ' · ' + escapeHtml( s.venue );
+			if ( typeof minsRemaining === 'number' ) {
+				html += ' · ' + ( minsRemaining > 0
+					? ( 'in ' + minsRemaining + ' min' )
+					: ( Math.abs( minsRemaining ) + ' min in' ) );
+			}
+			html += '</span></a>';
+			return html;
+		}
+
+		function tick() {
+			const today    = todayString();
+			const nowHHMM  = nowTimeString();
+			const nowMins  = timeToMinutes( nowHHMM );
+
+			// Clear "is-now" on all blocks first.
+			schedule.querySelectorAll( '.de-fe-block.is-now, .de-fe-mobile-item.is-now, .de-fe-day-nav-item.is-today' ).forEach( function ( el ) {
+				el.classList.remove( 'is-now' );
+				el.classList.remove( 'is-today' );
+			} );
+
+			// Pre-start: today is before the first event day.
+			if ( today < firstDay ) {
+				widget.hidden = false;
+				if ( currentSlot )  currentSlot.hidden  = true;
+				if ( nextSlot )     nextSlot.hidden     = true;
+				if ( prestartSlot ) prestartSlot.hidden = false;
+				prestartBody.textContent = 'Conference starts on ' + formatHumanDate( firstDay ) + '.';
+				return;
+			}
+
+			// Post-conference: today is after the last event day → hide widget.
+			if ( today > lastDay ) {
+				widget.hidden = true;
+				return;
+			}
+
+			// During the event window. Find sessions for today.
+			const todaysSessions = sessions.filter( function ( s ) { return s.day_date === today; } );
+			if ( ! todaysSessions.length ) {
+				// Mid-event "off" day (rare). Show prestart-style note.
+				widget.hidden = false;
+				if ( currentSlot )  currentSlot.hidden  = true;
+				if ( nextSlot )     nextSlot.hidden     = true;
+				if ( prestartSlot ) prestartSlot.hidden = false;
+				prestartBody.textContent = 'Conference resumes tomorrow.';
+				return;
+			}
+
+			// Highlight today's day-nav button if on this page.
+			schedule.querySelectorAll( '.de-fe-day-nav-item' ).forEach( function ( btn, idx ) {
+				if ( eventDays[ idx ] === today ) btn.classList.add( 'is-today' );
+			} );
+
+			// "Now": a session whose [start, end] contains the current minute.
+			let current = null;
+			todaysSessions.forEach( function ( s ) {
+				const sMin = timeToMinutes( s.start_time );
+				const eMin = timeToMinutes( s.end_time || s.start_time );
+				if ( nowMins >= sMin && nowMins < eMin ) current = s;
+			} );
+
+			// "Next": earliest start_time > now.
+			let next = null;
+			todaysSessions
+				.filter( function ( s ) { return timeToMinutes( s.start_time ) > nowMins; } )
+				.sort( function ( a, b ) { return timeToMinutes( a.start_time ) - timeToMinutes( b.start_time ); } )
+				.forEach( function ( s ) { if ( ! next ) next = s; } );
+
+			widget.hidden = false;
+			if ( prestartSlot ) prestartSlot.hidden = true;
+
+			if ( current ) {
+				currentSlot.hidden = false;
+				const remaining = timeToMinutes( current.end_time || current.start_time ) - nowMins;
+				currentBody.innerHTML = renderSession( current, remaining );
+				// Highlight on grid + mobile
+				schedule.querySelectorAll( '.de-fe-block[data-session-id="' + cssEscape( current.id ) + '"], .de-fe-mobile-item[data-session-id="' + cssEscape( current.id ) + '"]' ).forEach( function ( el ) {
+					el.classList.add( 'is-now' );
+				} );
+			} else {
+				currentSlot.hidden = true;
+			}
+
+			if ( next ) {
+				nextSlot.hidden = false;
+				const untilNext = timeToMinutes( next.start_time ) - nowMins;
+				nextBody.innerHTML = renderSession( next, untilNext );
+			} else {
+				nextSlot.hidden = true;
+			}
+
+			// If absolutely nothing today is now or upcoming, hide widget.
+			if ( ! current && ! next ) widget.hidden = true;
+		}
+
+		function cssEscape( s ) {
+			// Minimal — session IDs are UUIDs, no special chars expected.
+			return String( s ).replace( /["\\]/g, '\\$&' );
+		}
+
+		// Hook the now/next links so clicking opens the modal via the
+		// schedule's deOpenSession (set by setupSessionModal). Saves a
+		// page-level hashchange round-trip.
+		widget.addEventListener( 'click', function ( ev ) {
+			const a = ev.target.closest( '[data-de-now-link]' );
+			if ( ! a ) return;
+			ev.preventDefault();
+			const id = a.getAttribute( 'data-de-now-link' );
+			if ( id && typeof schedule.deOpenSession === 'function' ) schedule.deOpenSession( id );
+		} );
+
+		tick();
+		setInterval( tick, 30 * 1000 );
 	}
 
 	/* ============================================================

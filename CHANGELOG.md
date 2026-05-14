@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-05-14
+
+### Added — Now / Next widget on the agenda
+
+A live ticker that appears at the top of `[digitone_events_agenda]` when the device's local date is within the event window:
+
+- **Now** (red, pulsing) — the session currently in progress, with "X min in" remaining.
+- **Up next** (blue) — the earliest upcoming session for today, with "in X min".
+- **Pre-start** — before the conference starts, shows "Conference starts on Monday, 18 May."
+- **Post-event** — widget hides itself after the last event day passes.
+
+The widget ticks every 30 s. Today's day-nav button gets a primary-coloured ring (`.is-today`). The currently-running session on the grid + mobile list gets a "NOW" badge with a red outline so attendees scanning the schedule visually see where they should be.
+
+Time source is browser local time. On-site attendees with phones set to the venue timezone get correct results; remote viewers in other timezones will see drift relative to the venue, but the schedule itself is unaffected.
+
+### Added — Per-session deep links
+
+Every session gets a stable URL via the hash: `…/programme/#session-<uuid>`.
+
+- Opening that URL anywhere — pasted into a browser tab, sent via WhatsApp, embedded in an email — auto-opens the session modal on page load via `hashchange`-aware boot.
+- When a user opens a session by clicking on the grid, the URL hash updates to match, so the address bar always reflects what's currently visible. They can copy it manually too.
+- A new **Copy link** button in the modal action row puts that URL on the clipboard (with the standard browser fallback for non-`navigator.clipboard` environments). "Copy link" → flashes "Copied!" → reverts to "Copy link" after 1.5 s.
+
+### Added — QR code per session
+
+In the same action row, a **QR code** button toggles a QR canvas inside the modal. The QR encodes the deep-link URL, so anyone who scans it lands on the session page with the modal already open.
+
+[qrcode-generator](https://www.npmjs.com/package/qrcode-generator) is lazy-loaded from cdnjs on first click (~10 KB, then cached) and the QR is rendered once per session and kept around (`data-rendered` flag) so repeated toggles are instant.
+
+### Internal
+- `agenda.php` emits `day_date` per session in `de-fe-session-data` so the Now/Next widget can filter to today without a separate fetch.
+- `setupSessionModal()` now exposes `open()` on the schedule element (`schedule.deOpenSession`) so the Now/Next widget can trigger the modal directly without going through hash + hashchange round-trips.
+- `wireModalExtras()` wires Copy link + QR toggle on each modal open. QR canvas uses `qr.createImgTag(5, 12)` for a 5×-cellsize image with a 12 px quiet zone — good scan reliability without dominating the modal.
+- Block highlighting uses `.is-now` on `.de-fe-block` and `.de-fe-mobile-item`. The "NOW" badge is a `::before` pseudo-element so it doesn't disturb the existing block layout.
+
 ## [0.9.2] - 2026-05-14
 
 ### Fixed — Excel preview falsely flagged every speaker and session as "will insert"
@@ -372,6 +407,41 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.9.3] - 2026-05-14
+
+### Added — Now / Next widget on the agenda
+
+A live ticker that appears at the top of `[digitone_events_agenda]` when the device's local date is within the event window:
+
+- **Now** (red, pulsing) — the session currently in progress, with "X min in" remaining.
+- **Up next** (blue) — the earliest upcoming session for today, with "in X min".
+- **Pre-start** — before the conference starts, shows "Conference starts on Monday, 18 May."
+- **Post-event** — widget hides itself after the last event day passes.
+
+The widget ticks every 30 s. Today's day-nav button gets a primary-coloured ring (`.is-today`). The currently-running session on the grid + mobile list gets a "NOW" badge with a red outline so attendees scanning the schedule visually see where they should be.
+
+Time source is browser local time. On-site attendees with phones set to the venue timezone get correct results; remote viewers in other timezones will see drift relative to the venue, but the schedule itself is unaffected.
+
+### Added — Per-session deep links
+
+Every session gets a stable URL via the hash: `…/programme/#session-<uuid>`.
+
+- Opening that URL anywhere — pasted into a browser tab, sent via WhatsApp, embedded in an email — auto-opens the session modal on page load via `hashchange`-aware boot.
+- When a user opens a session by clicking on the grid, the URL hash updates to match, so the address bar always reflects what's currently visible. They can copy it manually too.
+- A new **Copy link** button in the modal action row puts that URL on the clipboard (with the standard browser fallback for non-`navigator.clipboard` environments). "Copy link" → flashes "Copied!" → reverts to "Copy link" after 1.5 s.
+
+### Added — QR code per session
+
+In the same action row, a **QR code** button toggles a QR canvas inside the modal. The QR encodes the deep-link URL, so anyone who scans it lands on the session page with the modal already open.
+
+[qrcode-generator](https://www.npmjs.com/package/qrcode-generator) is lazy-loaded from cdnjs on first click (~10 KB, then cached) and the QR is rendered once per session and kept around (`data-rendered` flag) so repeated toggles are instant.
+
+### Internal
+- `agenda.php` emits `day_date` per session in `de-fe-session-data` so the Now/Next widget can filter to today without a separate fetch.
+- `setupSessionModal()` now exposes `open()` on the schedule element (`schedule.deOpenSession`) so the Now/Next widget can trigger the modal directly without going through hash + hashchange round-trips.
+- `wireModalExtras()` wires Copy link + QR toggle on each modal open. QR canvas uses `qr.createImgTag(5, 12)` for a 5×-cellsize image with a 12 px quiet zone — good scan reliability without dominating the modal.
+- Block highlighting uses `.is-now` on `.de-fe-block` and `.de-fe-mobile-item`. The "NOW" badge is a `::before` pseudo-element so it doesn't disturb the existing block layout.
 
 ## [0.9.2] - 2026-05-14
 
