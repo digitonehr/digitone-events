@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.10] - 2026-05-14
+
+### Fixed — "Import CSV…" button did nothing
+
+The CSV block in `sessions.js` was placed at the IIFE's top level instead of inside `initSessionsTab`. That meant it ran at script-parse time (before `DOMContentLoaded`), the `[data-de-csv-modal]` query returned `null` because the dialog wasn't in the DOM yet, and the `page` reference threw under strict mode and aborted the block silently. Net effect: the click handler was never bound, the button looked alive but did nothing.
+
+Moved the entire CSV setup inside `initSessionsTab` so it's called from the `DOMContentLoaded` pass with `page` already resolved and the dialog already in the DOM.
+
 ## [0.8.9] - 2026-05-13
 
 ### Added — Bulk CSV import for sessions
@@ -303,6 +311,14 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.8.10] - 2026-05-14
+
+### Fixed — "Import CSV…" button did nothing
+
+The CSV block in `sessions.js` was placed at the IIFE's top level instead of inside `initSessionsTab`. That meant it ran at script-parse time (before `DOMContentLoaded`), the `[data-de-csv-modal]` query returned `null` because the dialog wasn't in the DOM yet, and the `page` reference threw under strict mode and aborted the block silently. Net effect: the click handler was never bound, the button looked alive but did nothing.
+
+Moved the entire CSV setup inside `initSessionsTab` so it's called from the `DOMContentLoaded` pass with `page` already resolved and the dialog already in the DOM.
 
 ## [0.8.9] - 2026-05-13
 
