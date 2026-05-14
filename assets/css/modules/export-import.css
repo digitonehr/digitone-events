@@ -246,3 +246,115 @@
 	opacity: 0.5;
 	cursor: not-allowed;
 }
+
+/* Manual mapping UI (0.9.5) — appears below upload row when auto-detect
+   can't place every sheet / column. Auto-hides when everything maps. */
+.de-excel-mapping {
+	margin: 20px 0;
+	padding: 20px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-left: 4px solid #dba617;
+	border-radius: 4px;
+}
+.de-excel-mapping-intro h3 {
+	margin: 0 0 6px;
+	font-size: 15px;
+}
+.de-excel-mapping-intro p {
+	margin: 0 0 16px;
+	color: #50575e;
+	font-size: 13px;
+}
+.de-excel-map-sheet {
+	margin-bottom: 10px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fafafa;
+	overflow: hidden;
+}
+.de-excel-map-sheet.is-matched   { border-left: 3px solid #00a32a; }
+.de-excel-map-sheet.is-unmatched { border-left: 3px solid #dba617; }
+.de-excel-map-sheet-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+	padding: 10px 14px;
+	background: #fff;
+}
+.de-excel-map-sheet-label {
+	flex: 1 1 200px;
+	min-width: 0;
+}
+.de-excel-map-sheet-rows {
+	color: #6c7781;
+	font-size: 12px;
+	font-weight: 400;
+}
+.de-excel-map-entity-wrap {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+}
+.de-excel-map-entity {
+	min-width: 200px;
+	max-width: 280px;
+}
+.de-excel-map-toggle {
+	font-size: 12px;
+}
+.de-excel-map-cols {
+	display: none;
+	padding: 8px 14px 14px;
+	background: #fafafa;
+	border-top: 1px solid #dcdcde;
+}
+.de-excel-map-sheet.is-expanded .de-excel-map-cols { display: block; }
+.de-excel-map-cols-empty {
+	color: #6c7781;
+	font-style: italic;
+	margin: 0;
+}
+.de-excel-map-cols-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+.de-excel-map-cols-table th,
+.de-excel-map-cols-table td {
+	padding: 6px 10px;
+	border-bottom: 1px solid #ececef;
+	text-align: left;
+	vertical-align: middle;
+}
+.de-excel-map-cols-table th {
+	font-weight: 600;
+	color: #50575e;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.de-excel-map-cols-table td:last-child {
+	width: 240px;
+}
+.de-excel-map-col {
+	width: 100%;
+	max-width: 230px;
+}
+.de-excel-map-unmatched {
+	display: inline-block;
+	font-size: 11px;
+	padding: 1px 6px;
+	border-radius: 3px;
+	background: #fcf0e1;
+	color: #b76e00;
+	margin-left: 6px;
+}
+.de-excel-mapping-actions {
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+	text-align: right;
+}

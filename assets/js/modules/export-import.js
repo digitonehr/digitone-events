@@ -48,13 +48,23 @@
 		const errorsBody = panel.querySelector( '[data-de-excel-errors-body]' );
 		const commitBtn  = panel.querySelector( '[data-de-action="excel-commit"]' );
 
-		let lastPayload = null;
-		let lastSchema  = null;
-		let lastReport  = null;
+		let lastPayload         = null;
+		let lastSchema          = null;
+		let lastReport          = null;
+		let lastStructure       = null;  // cached parsed workbook (don't re-read on every mapping change)
+		let lastFileRef         = null;  // sentinel — File object identity; reset structure when changed
+		let mappingOverrides    = {};    // user choices: { sheetEntityMap, columnFieldMap }
+		let mappingExplicitlyOk = false; // true after user clicks "Apply mapping & preview"
 
 		if ( fileInput && previewBtn ) {
 			fileInput.addEventListener( 'change', function () {
 				previewBtn.disabled = ! ( fileInput.files && fileInput.files.length );
+				// New file → wipe any mapping carried over from the previous one.
+				mappingOverrides    = {};
+				mappingExplicitlyOk = false;
+				lastStructure       = null;
+				lastFileRef         = null;
+				hideMappingUI();
 			} );
 		}
 
@@ -69,6 +79,13 @@
 			if ( action === 'excel-commit' )            { ev.preventDefault(); runCommit(); }
 			if ( action === 'excel-danger-cancel' )     { ev.preventDefault(); closeDangerDialog(); }
 			if ( action === 'excel-danger-proceed' )    { ev.preventDefault(); runCommitNow(); }
+			if ( action === 'excel-mapping-apply' )     { ev.preventDefault(); applyMappingAndPreview(); }
+			if ( action === 'excel-mapping-cancel' )    { ev.preventDefault(); hideMappingUI(); }
+			if ( action === 'excel-mapping-toggle-cols' ) {
+				ev.preventDefault();
+				const row = t.closest( '.de-excel-map-sheet' );
+				if ( row ) row.classList.toggle( 'is-expanded' );
+			}
 		} );
 
 		/* Style the active mode pill + toggle label class.
@@ -139,8 +156,13 @@
 			errorsWrap.hidden = true;
 			if ( fileInput ) fileInput.value = '';
 			if ( previewBtn ) previewBtn.disabled = true;
-			lastPayload = null;
-			lastSchema  = null;
+			lastPayload         = null;
+			lastSchema          = null;
+			lastStructure       = null;
+			lastFileRef         = null;
+			mappingOverrides    = {};
+			mappingExplicitlyOk = false;
+			hideMappingUI();
 		}
 
 		/* ---- Download (template or current data) ---- */
@@ -196,7 +218,10 @@
 
 		/* ---- Preview ---- */
 
-		async function runPreview() {
+		async function runPreview( opts ) {
+			opts = opts || {};
+			const skipMappingCheck = !! opts.skipMappingCheck;
+
 			if ( ! fileInput || ! fileInput.files || ! fileInput.files[ 0 ] ) return;
 			previewBtn.disabled = true;
 			previewBtn.textContent = 'Parsing…';
@@ -209,25 +234,62 @@
 					throw new Error( 'File exceeds 10 MB.' );
 				}
 
-				const buf = await file.arrayBuffer();
-				const XLSX = window.XLSX;
-				const wb = XLSX.read( buf, { type: 'array' } );
+				// First time we read the file we cache the parsed workbook
+				// (lastStructure) so the mapping UI can re-apply different
+				// overrides without re-parsing. On a fresh file the cache
+				// is invalidated below.
+				if ( fileInput.files[ 0 ] !== lastFileRef ) {
+					const buf = await file.arrayBuffer();
+					const XLSX = window.XLSX;
+					const wb = XLSX.read( buf, { type: 'array' } );
+					lastStructure = extractStructure( wb );
+					lastFileRef   = fileInput.files[ 0 ];
+					mappingOverrides     = {}; // reset on new file
+					mappingExplicitlyOk  = false;
+				}
 
 				// Need the entity schema to drive auto-mapping. Fetch it via
 				// the snapshot endpoint with mode=empty (cheap, no data rows).
-				const meta = await DE.api( 'digitone_events_excel_snapshot', { event_id: activeEvent, mode: 'empty' } );
-				lastSchema = meta.schema;
+				if ( ! lastSchema ) {
+					const meta = await DE.api( 'digitone_events_excel_snapshot', { event_id: activeEvent, mode: 'empty' } );
+					lastSchema = meta.schema;
+				}
 
-				const { payload, warnings } = autoMap( wb, lastSchema );
-				lastPayload = payload;
+				const mapping = applyMapping( lastStructure, lastSchema, mappingOverrides );
+				lastPayload = mapping.payload;
+
+				// Decide whether to show the mapping UI before going to
+				// the preview. We show it if (a) the user hasn't already
+				// approved the mapping in this session, AND (b) something
+				// is unmapped (sheet with no entity, OR a mapped sheet has
+				// at least one column the auto-detector couldn't place).
+				const hasUnmappedSheet  = mapping.unmappedSheets.length > 0;
+				const hasUnmappedColumn = Object.keys( mapping.sheetsByName ).some( function ( name ) {
+					const info = mapping.sheetsByName[ name ];
+					if ( ! info.chosenEk ) return false;
+					return info.headers.some( function ( h, i ) { return ! info.colMap[ i ]; } );
+				} );
+				const needsMapping = ! skipMappingCheck
+					&& ! mappingExplicitlyOk
+					&& ( hasUnmappedSheet || hasUnmappedColumn );
+
+				if ( needsMapping ) {
+					showMappingUI( mapping );
+					previewBtn.disabled = false;
+					previewBtn.textContent = 'Preview import';
+					return;
+				}
+
+				// Auto-mapped cleanly OR user has applied overrides.
+				hideMappingUI();
 
 				const res = await DE.api( 'digitone_events_excel_preview', {
 					event_id: activeEvent,
 					mode:     currentMode(),
-					payload:  JSON.stringify( payload ),
+					payload:  JSON.stringify( lastPayload ),
 				} );
 
-				renderReport( res, warnings );
+				renderReport( res, mappingWarnings( mapping, lastSchema ) );
 				previewBtn.disabled = false;
 				previewBtn.textContent = 'Preview import';
 			} catch ( err ) {
@@ -280,51 +342,108 @@
 				} );
 		}
 
-		/* ---- Auto-map workbook → JSON shape that backend expects ---- */
-
-		function autoMap( wb, schema ) {
-			const payload  = {};
-			const warnings = [];
-
-			// Build canonical map: norm(sheetName) → entity_key
-			const sheetIndex = {}; // normalized → entity_key
-			Object.keys( schema ).forEach( function ( ek ) {
-				sheetIndex[ normalize( schema[ ek ].sheet ) ] = ek;
-			} );
-
+		/* ---- Workbook structure extraction (0.9.5) ----
+		 * Split the old monolithic autoMap into two passes:
+		 *   1. extractStructure(wb) — read sheet names + headers + rows
+		 *      once. Independent of schema or mapping.
+		 *   2. applyMapping(structure, schema, overrides) — turn the
+		 *      structure into the JSON payload using auto-detection
+		 *      plus the user's override choices.
+		 * The two-pass shape is what makes the manual-mapping UI work:
+		 * we present the structure to the user, they pick overrides,
+		 * applyMapping re-runs with their choices and we go to preview.
+		 */
+		function extractStructure( wb ) {
+			const sheets = [];
 			wb.SheetNames.forEach( function ( sheetName ) {
 				const ws    = wb.Sheets[ sheetName ];
 				const aoa   = window.XLSX.utils.sheet_to_json( ws, { header: 1, defval: '' } );
 				if ( ! aoa || ! aoa.length ) return;
-
-				const headers = ( aoa[ 0 ] || [] ).map( function ( h ) { return String( h ); } );
+				const headers = ( aoa[ 0 ] || [] ).map( function ( h ) { return String( h == null ? '' : h ); } );
 				const rows    = aoa.slice( 1 );
+				sheets.push( { name: sheetName, headers: headers, rows: rows } );
+			} );
+			return { sheets: sheets };
+		}
 
-				const ek = sheetIndex[ normalize( sheetName ) ];
+		/**
+		 * @param structure {sheets:[{name, headers, rows}]}
+		 * @param schema    entity_key → {sheet, columns, ...}
+		 * @param overrides {sheetEntityMap:{sheetName→entity_key|'_skip'},
+		 *                   columnFieldMap:{sheetName:{colIdx→field|'_skip'}}}
+		 *                  Either map can be missing keys — falls back to
+		 *                  the auto-detected value.
+		 * @returns {payload, autoSheet, autoColumn, unmappedSheets, sheetsByName}
+		 *   - payload: backend-shaped JSON (entity_sheet → rows[])
+		 *   - autoSheet[sheetName] = entity_key | null  (best guess)
+		 *   - autoColumn[sheetName][colIdx] = field | null
+		 *   - unmappedSheets: array of sheet names that have no entity
+		 *   - sheetsByName: same structure but indexed for the UI
+		 */
+		function applyMapping( structure, schema, overrides ) {
+			overrides = overrides || {};
+			const sheetEntityMap = overrides.sheetEntityMap || {};
+			const columnFieldMap = overrides.columnFieldMap || {};
+
+			// Auto sheet-name lookup: norm(sheetName) → entity_key
+			const sheetIndex = {};
+			Object.keys( schema ).forEach( function ( ek ) {
+				sheetIndex[ normalize( schema[ ek ].sheet ) ] = ek;
+			} );
+
+			const payload         = {};
+			const autoSheet       = {};
+			const autoColumn      = {};
+			const unmappedSheets  = [];
+			const sheetsByName    = {};
+
+			structure.sheets.forEach( function ( sheet ) {
+				const sheetName = sheet.name;
+				const headers   = sheet.headers;
+				const rows      = sheet.rows;
+
+				// Auto-detect entity for the sheet
+				const autoEk = sheetIndex[ normalize( sheetName ) ] || null;
+				autoSheet[ sheetName ] = autoEk;
+
+				// Apply override if present (_skip = explicitly skip this sheet)
+				let ek = ( sheetName in sheetEntityMap ) ? sheetEntityMap[ sheetName ] : autoEk;
+				if ( ek === '_skip' ) ek = null;
+				if ( ek && ! schema[ ek ] ) ek = null;
+
+				sheetsByName[ sheetName ] = {
+					autoEk:    autoEk,
+					chosenEk:  ek,
+					headers:   headers,
+					rowCount:  rows.length,
+				};
+
 				if ( ! ek ) {
-					warnings.push( 'Sheet "' + sheetName + '" did not match any known entity — ignored.' );
+					unmappedSheets.push( sheetName );
 					return;
 				}
+
 				const def = schema[ ek ];
-
-				// Column header → field name map
-				const wanted   = def.columns;
+				// Auto column-header lookup for THIS entity
 				const wantedNk = {};
-				wanted.forEach( function ( f ) { wantedNk[ normalize( f ) ] = f; } );
+				def.columns.forEach( function ( f ) { wantedNk[ normalize( f ) ] = f; } );
 
-				const colMap = {}; // column index → field name
+				const overrideCols = columnFieldMap[ sheetName ] || {};
+
+				autoColumn[ sheetName ] = {};
+				const colMap = {}; // chosen col index → field name (after overrides)
 				headers.forEach( function ( h, i ) {
-					const norm = normalize( h );
-					if ( wantedNk[ norm ] ) {
-						colMap[ i ] = wantedNk[ norm ];
-					}
+					const autoField = wantedNk[ normalize( h ) ] || null;
+					autoColumn[ sheetName ][ i ] = autoField;
+					let field = ( i in overrideCols ) ? overrideCols[ i ] : autoField;
+					if ( field === '_skip' ) field = null;
+					if ( field && def.columns.indexOf( field ) === -1 ) field = null;
+					if ( field ) colMap[ i ] = field;
 				} );
+				sheetsByName[ sheetName ].autoColumn = autoColumn[ sheetName ];
+				sheetsByName[ sheetName ].colMap     = colMap;
 
-				const unmappedCols = headers.filter( function ( h, i ) { return ! colMap[ i ]; } );
-				if ( unmappedCols.length ) {
-					warnings.push( 'Sheet "' + sheetName + '" — columns ignored: ' + unmappedCols.join( ', ' ) );
-				}
-
+				// Build entity rows
 				const out = [];
 				rows.forEach( function ( r ) {
 					if ( ! r || ! r.length ) return;
@@ -338,11 +457,239 @@
 					} );
 					if ( any ) out.push( obj );
 				} );
-
 				payload[ def.sheet ] = out;
 			} );
 
-			return { payload: payload, warnings: warnings };
+			return {
+				payload:        payload,
+				autoSheet:      autoSheet,
+				autoColumn:     autoColumn,
+				unmappedSheets: unmappedSheets,
+				sheetsByName:   sheetsByName,
+			};
+		}
+
+		/* ---- Manual mapping UI (0.9.5) ----
+		 *
+		 * Built imperatively into a single container so we can re-render
+		 * after every user choice. Layout:
+		 *
+		 *   ┌── per workbook sheet ──┐
+		 *   │ "Speakers Q1"          │
+		 *   │   Maps to: [Speakers ▼]│      ← entity dropdown
+		 *   │   [▸ Configure columns]│      ← expander
+		 *   │     "First Name"  → [first_name ▼]
+		 *   │     "Surname"     → [ — pick — ▼]
+		 *   │     "Email"       → [ — ignore — ▼]
+		 *   └────────────────────────┘
+		 *
+		 * "Apply mapping & preview" sets `mappingExplicitlyOk = true` so
+		 * the next runPreview() call skips the gate and goes to preview.
+		 */
+		function showMappingUI( mapping ) {
+			let container = panel.querySelector( '[data-de-mapping-ui]' );
+			if ( ! container ) {
+				container = document.createElement( 'div' );
+				container.setAttribute( 'data-de-mapping-ui', '' );
+				container.className = 'de-excel-mapping';
+				// Insert after the upload row (.de-excel-row) so it appears
+				// above the preview area.
+				const uploadRow = panel.querySelector( '.de-excel-row' );
+				if ( uploadRow ) uploadRow.insertAdjacentElement( 'afterend', container );
+				else panel.appendChild( container );
+			}
+			container.innerHTML = '';
+			container.hidden = false;
+
+			const intro = document.createElement( 'div' );
+			intro.className = 'de-excel-mapping-intro';
+			intro.innerHTML =
+				'<h3>Map your workbook</h3>' +
+				'<p>Some sheet names or column headers in your file don\'t match the expected schema. Pick what each one should map to. Anything left as "— skip —" will be ignored.</p>';
+			container.appendChild( intro );
+
+			Object.keys( mapping.sheetsByName ).forEach( function ( sheetName ) {
+				const info = mapping.sheetsByName[ sheetName ];
+				const row  = document.createElement( 'div' );
+				row.className = 'de-excel-map-sheet';
+				if ( info.chosenEk ) row.classList.add( 'is-matched' );
+				else                 row.classList.add( 'is-unmatched' );
+
+				// Header line: sheet name + entity dropdown + row count
+				const head = document.createElement( 'div' );
+				head.className = 'de-excel-map-sheet-head';
+				head.innerHTML =
+					'<div class="de-excel-map-sheet-label"><strong>' + escapeHtml( sheetName ) + '</strong>' +
+					' <span class="de-excel-map-sheet-rows">(' + info.rowCount + ' rows)</span></div>';
+
+				const entitySel = document.createElement( 'select' );
+				entitySel.className = 'de-excel-map-entity';
+				entitySel.setAttribute( 'data-sheet', sheetName );
+				const optSkip = document.createElement( 'option' );
+				optSkip.value = '_skip';
+				optSkip.textContent = '— skip this sheet —';
+				entitySel.appendChild( optSkip );
+				Object.keys( lastSchema ).forEach( function ( ek ) {
+					const o = document.createElement( 'option' );
+					o.value = ek;
+					o.textContent = lastSchema[ ek ].sheet + ' (' + ek + ')';
+					if ( info.chosenEk === ek ) o.selected = true;
+					entitySel.appendChild( o );
+				} );
+				if ( ! info.chosenEk ) optSkip.selected = true;
+
+				const entityWrap = document.createElement( 'div' );
+				entityWrap.className = 'de-excel-map-entity-wrap';
+				entityWrap.appendChild( document.createTextNode( 'Maps to: ' ) );
+				entityWrap.appendChild( entitySel );
+				head.appendChild( entityWrap );
+
+				// Expander for columns (only useful when an entity is chosen).
+				const toggleBtn = document.createElement( 'button' );
+				toggleBtn.type = 'button';
+				toggleBtn.className = 'button-link de-excel-map-toggle';
+				toggleBtn.setAttribute( 'data-de-action', 'excel-mapping-toggle-cols' );
+				toggleBtn.textContent = 'Configure columns';
+				head.appendChild( toggleBtn );
+				row.appendChild( head );
+
+				const cols = document.createElement( 'div' );
+				cols.className = 'de-excel-map-cols';
+				row.appendChild( cols );
+
+				function renderCols() {
+					cols.innerHTML = '';
+					const ek = entitySel.value;
+					if ( ! ek || ek === '_skip' ) {
+						cols.innerHTML = '<p class="de-excel-map-cols-empty">Sheet skipped — no columns to map.</p>';
+						return;
+					}
+					const def = lastSchema[ ek ];
+					const overridesForSheet = ( mappingOverrides.columnFieldMap && mappingOverrides.columnFieldMap[ sheetName ] ) || {};
+					const autoFor = ( info.autoEk === ek ) ? info.autoColumn : null;
+					const wantedNk = {};
+					def.columns.forEach( function ( f ) { wantedNk[ normalize( f ) ] = f; } );
+
+					const table = document.createElement( 'table' );
+					table.className = 'de-excel-map-cols-table';
+					table.innerHTML = '<thead><tr><th>Column in your sheet</th><th>Maps to field</th></tr></thead>';
+					const tbody = document.createElement( 'tbody' );
+
+					info.headers.forEach( function ( h, i ) {
+						const tr = document.createElement( 'tr' );
+						// Resolve current value: override > auto-for-current-entity > re-run wantedNk
+						let chosen = ( i in overridesForSheet ) ? overridesForSheet[ i ] : null;
+						if ( chosen == null ) {
+							chosen = ( autoFor && autoFor[ i ] ) ? autoFor[ i ] : ( wantedNk[ normalize( h ) ] || null );
+						}
+						const sel = document.createElement( 'select' );
+						sel.className = 'de-excel-map-col';
+						sel.setAttribute( 'data-sheet', sheetName );
+						sel.setAttribute( 'data-col', String( i ) );
+						const sk = document.createElement( 'option' );
+						sk.value = '_skip';
+						sk.textContent = '— ignore this column —';
+						sel.appendChild( sk );
+						def.columns.forEach( function ( f ) {
+							const o = document.createElement( 'option' );
+							o.value = f;
+							o.textContent = f;
+							if ( chosen === f ) o.selected = true;
+							sel.appendChild( o );
+						} );
+						if ( chosen === null || chosen === '_skip' ) sk.selected = true;
+
+						const td1 = document.createElement( 'td' );
+						td1.innerHTML = '<strong>' + escapeHtml( h ) + '</strong>';
+						if ( ! chosen ) td1.innerHTML += ' <span class="de-excel-map-unmatched">unmapped</span>';
+						const td2 = document.createElement( 'td' );
+						td2.appendChild( sel );
+						tr.appendChild( td1 );
+						tr.appendChild( td2 );
+						tbody.appendChild( tr );
+					} );
+
+					table.appendChild( tbody );
+					cols.appendChild( table );
+				}
+				renderCols();
+				entitySel.addEventListener( 'change', function () {
+					row.classList.toggle( 'is-matched',    entitySel.value !== '_skip' );
+					row.classList.toggle( 'is-unmatched',  entitySel.value === '_skip' );
+					row.classList.add( 'is-expanded' );
+					renderCols();
+				} );
+
+				// Auto-expand if anything is unmapped on this sheet
+				const hasUnmapped = info.chosenEk
+					? info.headers.some( function ( h, i ) { return ! info.colMap[ i ]; } )
+					: true;
+				if ( hasUnmapped ) row.classList.add( 'is-expanded' );
+
+				container.appendChild( row );
+			} );
+
+			const actions = document.createElement( 'div' );
+			actions.className = 'de-excel-mapping-actions';
+			actions.innerHTML =
+				'<button type="button" class="button" data-de-action="excel-mapping-cancel">Cancel</button> ' +
+				'<button type="button" class="button button-primary" data-de-action="excel-mapping-apply">Apply mapping &amp; preview</button>';
+			container.appendChild( actions );
+
+			container.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+		}
+
+		function hideMappingUI() {
+			const container = panel.querySelector( '[data-de-mapping-ui]' );
+			if ( container ) {
+				container.hidden = true;
+				container.innerHTML = '';
+			}
+		}
+
+		function applyMappingAndPreview() {
+			const container = panel.querySelector( '[data-de-mapping-ui]' );
+			if ( ! container ) return;
+
+			const sheetEntityMap = {};
+			container.querySelectorAll( '.de-excel-map-entity' ).forEach( function ( sel ) {
+				sheetEntityMap[ sel.getAttribute( 'data-sheet' ) ] = sel.value;
+			} );
+
+			const columnFieldMap = {};
+			container.querySelectorAll( '.de-excel-map-col' ).forEach( function ( sel ) {
+				const sheet = sel.getAttribute( 'data-sheet' );
+				const idx   = parseInt( sel.getAttribute( 'data-col' ), 10 );
+				if ( ! columnFieldMap[ sheet ] ) columnFieldMap[ sheet ] = {};
+				columnFieldMap[ sheet ][ idx ] = sel.value;
+			} );
+
+			mappingOverrides    = { sheetEntityMap: sheetEntityMap, columnFieldMap: columnFieldMap };
+			mappingExplicitlyOk = true;
+			hideMappingUI();
+			runPreview( { skipMappingCheck: true } );
+		}
+
+		/* Compact warnings for the preview-summary line — only complains
+		 * about things the user explicitly chose to skip (or that didn't
+		 * map and weren't overridden). */
+		function mappingWarnings( mapping, schema ) {
+			const out = [];
+			Object.keys( mapping.sheetsByName ).forEach( function ( name ) {
+				const info = mapping.sheetsByName[ name ];
+				if ( ! info.chosenEk ) {
+					out.push( 'Sheet "' + name + '" not mapped — ignored.' );
+					return;
+				}
+				const def = schema[ info.chosenEk ];
+				const unmapped = info.headers
+					.map( function ( h, i ) { return info.colMap[ i ] ? null : h; } )
+					.filter( Boolean );
+				if ( unmapped.length ) {
+					out.push( 'Sheet "' + name + '" → ' + def.sheet + ' — columns ignored: ' + unmapped.join( ', ' ) );
+				}
+			} );
+			return out;
 		}
 
 		function normalize( s ) {

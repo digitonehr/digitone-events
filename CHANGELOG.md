@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-05-14
+
+### Added — Manual mapping fallback for Excel import
+
+When the uploaded workbook is what we shipped as the template, auto-detection picks up every sheet and every column on its own and nothing changes about the existing flow. But when an external partner sends an Excel with sheet names like "Speakers Q1" or columns like "Surname" / "Email" that don't match the schema, the 0.9.0 behaviour was to skip them with a warning and never show that data. This release adds an inline mapping UI that surfaces only when something didn't auto-match.
+
+#### Flow
+1. **Click "Preview import"** on an .xlsx whose sheet names or column headers don't all map cleanly.
+2. Instead of jumping to preview, a yellow-bordered mapping panel slides in below the upload row with one card per sheet in the workbook:
+   - **Sheet header line**: name in your file, row count, "Maps to: ▾" dropdown of every entity (or "skip this sheet"). Green left border if mapped, amber if not.
+   - **Configure columns** expander opens a two-column table: your sheet's header text in one column, a dropdown of valid fields in the other. Auto-detected columns are pre-selected; unmapped columns wear an amber "unmapped" pill.
+3. **"Apply mapping & preview"** locks the choices in (`mappingExplicitlyOk` flag) and re-runs the preview through the same `applyMapping()` → `excel_preview` path.
+4. The mapping carries forward to commit — the same overrides go to `excel_commit` so what you preview is exactly what you get.
+
+#### Workbooks that auto-detect cleanly skip this UI entirely
+If every sheet matched an entity and every header matched a field, `runPreview` proceeds straight to the preview table just like before. The mapping UI is only revealed when there's something to fix, so the happy path (you used the template) stays a single click.
+
+#### Smart defaults
+- Changing the entity dropdown re-renders the column table for that entity (different entities have different columns).
+- If you change the entity to one that wasn't the auto-detected one, columns auto-re-resolve against the new entity's column list (so "name" still finds the `name` field on either Roles or Titles, for instance).
+- File picker change wipes the cached mapping — switching to a different .xlsx always restarts with fresh auto-detection.
+- Switching between Incremental and Full mode while a mapping is set keeps the mapping (it doesn't depend on mode) and re-runs preview with new mode.
+
+#### Internal
+- `autoMap()` was split into `extractStructure( wb )` (reads sheet names + headers + rows once) and `applyMapping( structure, schema, overrides )` (turns structure into the backend-shaped payload given an optional override map). Splitting let us cache the parsed workbook between mapping re-renders — re-applying with different overrides doesn't re-parse the .xlsx.
+- New `mappingWarnings()` builds the same "Sheet X — columns ignored: …" message the old `autoMap` returned, so the preview-summary warning row keeps its informational role for sheets the user chose to skip.
+- The mapping container `[data-de-mapping-ui]` is built imperatively inside `showMappingUI()` so the UI matches the workbook structure (no hard-coded list of sheets). `hideMappingUI()` clears it; both `resetUi()` and the file-input `change` listener call it.
+
 ## [0.9.4] - 2026-05-14
 
 ### Added — Excel Full overwrite mode + JSON backup integration
@@ -441,6 +469,34 @@ Each block in the rendered HTML now carries `data-start-minutes` and `data-end-m
 - **Mobile session items now show speakers.** Up to 3 names are shown comma-separated inline, with a `+N` indicator for the rest, matching the desktop block content.
 - Mobile items have proper focus styling (2px primary-coloured ring) and are keyboard-focusable so the modal can be opened with Enter/Space on touch + bluetooth keyboard combos.
 - Break-type mobile items are styled as a centred ribbon (matching the desktop grid's break appearance) and are NOT clickable (no `data-session-id`).
+
+## [0.9.5] - 2026-05-14
+
+### Added — Manual mapping fallback for Excel import
+
+When the uploaded workbook is what we shipped as the template, auto-detection picks up every sheet and every column on its own and nothing changes about the existing flow. But when an external partner sends an Excel with sheet names like "Speakers Q1" or columns like "Surname" / "Email" that don't match the schema, the 0.9.0 behaviour was to skip them with a warning and never show that data. This release adds an inline mapping UI that surfaces only when something didn't auto-match.
+
+#### Flow
+1. **Click "Preview import"** on an .xlsx whose sheet names or column headers don't all map cleanly.
+2. Instead of jumping to preview, a yellow-bordered mapping panel slides in below the upload row with one card per sheet in the workbook:
+   - **Sheet header line**: name in your file, row count, "Maps to: ▾" dropdown of every entity (or "skip this sheet"). Green left border if mapped, amber if not.
+   - **Configure columns** expander opens a two-column table: your sheet's header text in one column, a dropdown of valid fields in the other. Auto-detected columns are pre-selected; unmapped columns wear an amber "unmapped" pill.
+3. **"Apply mapping & preview"** locks the choices in (`mappingExplicitlyOk` flag) and re-runs the preview through the same `applyMapping()` → `excel_preview` path.
+4. The mapping carries forward to commit — the same overrides go to `excel_commit` so what you preview is exactly what you get.
+
+#### Workbooks that auto-detect cleanly skip this UI entirely
+If every sheet matched an entity and every header matched a field, `runPreview` proceeds straight to the preview table just like before. The mapping UI is only revealed when there's something to fix, so the happy path (you used the template) stays a single click.
+
+#### Smart defaults
+- Changing the entity dropdown re-renders the column table for that entity (different entities have different columns).
+- If you change the entity to one that wasn't the auto-detected one, columns auto-re-resolve against the new entity's column list (so "name" still finds the `name` field on either Roles or Titles, for instance).
+- File picker change wipes the cached mapping — switching to a different .xlsx always restarts with fresh auto-detection.
+- Switching between Incremental and Full mode while a mapping is set keeps the mapping (it doesn't depend on mode) and re-runs preview with new mode.
+
+#### Internal
+- `autoMap()` was split into `extractStructure( wb )` (reads sheet names + headers + rows once) and `applyMapping( structure, schema, overrides )` (turns structure into the backend-shaped payload given an optional override map). Splitting let us cache the parsed workbook between mapping re-renders — re-applying with different overrides doesn't re-parse the .xlsx.
+- New `mappingWarnings()` builds the same "Sheet X — columns ignored: …" message the old `autoMap` returned, so the preview-summary warning row keeps its informational role for sheets the user chose to skip.
+- The mapping container `[data-de-mapping-ui]` is built imperatively inside `showMappingUI()` so the UI matches the workbook structure (no hard-coded list of sheets). `hideMappingUI()` clears it; both `resetUi()` and the file-input `change` listener call it.
 
 ## [0.9.4] - 2026-05-14
 
