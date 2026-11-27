@@ -2,7 +2,7 @@
 /**
  * Excel import / export panel — rendered inside Export / Import admin page.
  *
- * Uses SheetJS (lazy-loaded from cdnjs by assets/js/modules/excel-import.js)
+ * Uses SheetJS (bundled in assets/lib/sheetjs, lazy-loaded by assets/js/modules/export-import.js)
  * for both reading uploaded .xlsx and writing the export / template files.
  *
  * @var string|null  $active_event_id

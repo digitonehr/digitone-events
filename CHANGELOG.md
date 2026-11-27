@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.6] - 2026-11-27
+
+### Security / reliability fixes from code review
+
+#### Excel import in Full mode is now atomic
+Full mode deletes the event's existing data and then inserts the imported rows. Before, a failure partway through left the event half-empty. Now:
+- The payload is **validated first** (same pass as Preview). If any row has an error, the import is aborted before anything is deleted, and the errors are shown in the preview table.
+- The wipe + insert runs inside a **database transaction**. If the database rejects a row or PHP throws, everything is rolled back and the event keeps its previous data.
+- In the UI, "Replace event data…" stays disabled while a Full-mode preview has errors, and an aborted commit shows the reason instead of reloading.
+
+#### SheetJS bundled locally, upgraded 0.18.5 → 0.20.3
+The cdnjs build of SheetJS 0.18.5 is affected by CVE-2023-30533 (prototype pollution when reading crafted files) and CVE-2024-22363 (ReDoS). SheetJS no longer publishes to cdnjs/npm, so 0.20.3 from cdn.sheetjs.com is now shipped in `assets/lib/sheetjs/` and loaded from the plugin itself. This also removes the third-party CDN dependency from the Export / Import page.
+
+#### GitHub token no longer exposed
+- The Settings page no longer prints the saved token into the page source. The field is blank with a "saved, leave blank to keep" placeholder; typing a new value replaces it and a "Remove saved token" checkbox clears it.
+- The updater now attaches the token only to HTTPS requests whose host is exactly `api.github.com`, `github.com` or `codeload.github.com`. Before, any URL that merely contained "github.com" (e.g. `github.com.example.net`) received it.
+
 ## [0.9.5] - 2026-05-14
 
 ### Added — Manual mapping fallback for Excel import

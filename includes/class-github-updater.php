@@ -215,9 +215,28 @@ final class DigitOne_Events_Github_Updater {
 		return $url;
 	}
 
+	/**
+	 * Hosts the token may be sent to. Matched exactly against the parsed
+	 * URL host (0.9.6) — previously any URL merely containing "github.com"
+	 * got the token, e.g. https://github.com.attacker.example/ or
+	 * https://example.com/?r=github.com.
+	 *   - api.github.com     release metadata + zipball endpoint
+	 *   - github.com         release asset browser_download_url
+	 *   - codeload.github.com  zipball download (redirect target)
+	 */
+	private const TOKEN_HOSTS = [ 'api.github.com', 'github.com', 'codeload.github.com' ];
+
+	public static function is_token_host( string $url ) : bool {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) || strtolower( (string) ( $parts['scheme'] ?? '' ) ) !== 'https' ) {
+			return false;
+		}
+		return in_array( strtolower( $parts['host'] ), self::TOKEN_HOSTS, true );
+	}
+
 	public function add_auth_header_to_download( $args, $url ) {
-		// Only attach to GitHub release downloads.
-		if ( strpos( (string) $url, 'github.com' ) === false && strpos( (string) $url, 'githubusercontent.com' ) === false ) {
+		// Only attach to GitHub hosts we trust, over HTTPS.
+		if ( ! self::is_token_host( (string) $url ) ) {
 			return $args;
 		}
 		$token = $this->token();
