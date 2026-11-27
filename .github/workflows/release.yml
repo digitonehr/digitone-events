@@ -43,6 +43,11 @@ jobs:
             exit 1
           fi
 
+      - name: Verify bundled SheetJS
+        run: |
+          # Must match assets/lib/sheetjs/README.md (SheetJS 0.20.3).
+          echo "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41  assets/lib/sheetjs/xlsx.full.min.js" | sha256sum -c -
+
       - name: Build plugin zip
         run: |
           set -euo pipefail

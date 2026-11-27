@@ -27,7 +27,12 @@
 	const DE = window.DigitoneEvents;
 	if ( ! DE || typeof DE.api !== 'function' ) return;
 
-	const SHEETJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+	/* SheetJS is bundled with the plugin (0.9.6). The old cdnjs build
+	 * (0.18.5) has CVE-2023-30533 (prototype pollution) and CVE-2024-22363
+	 * (ReDoS), and SheetJS no longer publishes fixed builds there or on npm.
+	 * Source: https://cdn.sheetjs.com — see assets/lib/sheetjs/README.md. */
+	const SHEETJS_VERSION = '0.20.3';
+	const SHEETJS_URL = String( ( DE && DE.pluginUrl ) || '' ) + 'assets/lib/sheetjs/xlsx.full.min.js?ver=' + SHEETJS_VERSION;
 
 	document.addEventListener( 'DOMContentLoaded', function () {
 		const panel = document.querySelector( '[data-de-excel-panel]' );
@@ -326,6 +331,14 @@
 				payload:  JSON.stringify( lastPayload ),
 			} )
 				.then( function ( res ) {
+					/* 0.9.6: Full mode validates before deleting and runs in
+					 * a transaction. An aborted run changed nothing — show
+					 * the errors instead of reloading. */
+					if ( res.aborted ) {
+						renderReport( res );
+						DE.feedback( res.message || 'Import aborted. Nothing was changed.', 'error' );
+						return;
+					}
 					const t = res.totals || {};
 					const parts = [];
 					if ( t.deleted )  parts.push( 'deleted ' + t.deleted );
@@ -725,7 +738,13 @@
 			}
 			summary += ', <strong>' + totals.errors + '</strong> errors.';
 
-			let html = '<div class="' + cls + ' inline" style="padding:10px;margin:0 0 12px"><p style="margin:0">' + summary + '</p></div>';
+			let html = '';
+			if ( res.aborted && res.message ) {
+				html += '<div class="notice notice-error inline" style="padding:10px;margin:0 0 12px"><p style="margin:0"><strong>' + escapeHtml( res.message ) + '</strong></p></div>';
+			} else if ( isFull && totals.errors > 0 ) {
+				html += '<div class="notice notice-error inline" style="padding:10px;margin:0 0 12px"><p style="margin:0">Full replace is blocked until every row is valid, so the event is never left half-imported. Fix the rows below and preview again.</p></div>';
+			}
+			html += '<div class="' + cls + ' inline" style="padding:10px;margin:0 0 12px"><p style="margin:0">' + summary + '</p></div>';
 			if ( warnings && warnings.length ) {
 				html += '<div class="notice notice-warning inline" style="padding:8px 10px;margin:0 0 12px"><p style="margin:0;font-size:12px">' +
 					warnings.map( escapeHtml ).join( '<br>' ) + '</p></div>';
@@ -759,7 +778,7 @@
 			errorsWrap.hidden = errorsBody.children.length === 0;
 
 			if ( commitBtn ) {
-				commitBtn.disabled = ( totals.inserted === 0 && ! isFull );
+				commitBtn.disabled = ( totals.inserted === 0 && ! isFull ) || ( isFull && totals.errors > 0 );
 				commitBtn.textContent = isFull ? 'Replace event data…' : 'Confirm import';
 				commitBtn.classList.toggle( 'button-danger', isFull );
 			}
@@ -780,13 +799,13 @@
 		return new Promise( function ( resolve, reject ) {
 			if ( typeof window.XLSX !== 'undefined' ) { resolve(); return; }
 			const s = document.createElement( 'script' );
-			s.src = SHEETJS_CDN;
+			s.src = SHEETJS_URL;
 			s.async = true;
 			s.onload = function () {
 				if ( typeof window.XLSX !== 'undefined' ) resolve();
 				else reject( new Error( 'XLSX global missing after load' ) );
 			};
-			s.onerror = function () { reject( new Error( 'Failed to load ' + SHEETJS_CDN ) ); };
+			s.onerror = function () { reject( new Error( 'Failed to load ' + SHEETJS_URL ) ); };
 			document.head.appendChild( s );
 		} );
 	}

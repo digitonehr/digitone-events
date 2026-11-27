@@ -13,7 +13,9 @@ $token_const = defined( 'DIGITONE_EVENTS_GH_TOKEN' ) && DIGITONE_EVENTS_GH_TOKEN
 
 $owner = get_option( 'digitone_events_gh_owner', DIGITONE_EVENTS_GH_OWNER );
 $repo  = get_option( 'digitone_events_gh_repo',  DIGITONE_EVENTS_GH_REPO );
-$token = get_option( 'digitone_events_gh_token', '' );
+// Never echo the saved token back into the page (0.9.6). We only need to
+// know whether one is stored, to show a placeholder.
+$token_saved = (string) get_option( 'digitone_events_gh_token', '' ) !== '';
 ?>
 <div class="wrap digitone-events-settings">
 	<h1><?php esc_html_e( 'DigitOne Events — Settings', 'digitone-events' ); ?></h1>
@@ -51,7 +53,16 @@ $token = get_option( 'digitone_events_gh_token', '' );
 				<th scope="row"><label for="digitone_events_gh_token"><?php esc_html_e( 'Personal access token', 'digitone-events' ); ?></label></th>
 				<td>
 					<input name="digitone_events_gh_token" id="digitone_events_gh_token" type="password" class="regular-text"
-						value="<?php echo esc_attr( $token ); ?>" <?php disabled( $token_const ); ?> autocomplete="off">
+						value="" <?php disabled( $token_const ); ?> autocomplete="new-password"
+						placeholder="<?php echo $token_saved ? esc_attr__( '•••••••• (saved, leave blank to keep)', 'digitone-events' ) : ''; ?>">
+					<?php if ( $token_saved && ! $token_const ) : ?>
+						<p>
+							<label>
+								<input type="checkbox" name="<?php echo esc_attr( DigitOne_Events_Settings::TOKEN_CLEAR_FIELD ); ?>" value="1">
+								<?php esc_html_e( 'Remove saved token', 'digitone-events' ); ?>
+							</label>
+						</p>
+					<?php endif; ?>
 					<p class="description">
 						<?php esc_html_e( 'Only needed for private repositories. For better security, set DIGITONE_EVENTS_GH_TOKEN constant in wp-config.php instead.', 'digitone-events' ); ?>
 						<?php if ( $token_const ) : ?>

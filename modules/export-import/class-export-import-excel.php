@@ -22,7 +22,9 @@
  * Modes:
  *   - incremental: skip rows whose natural key already exists; insert the rest.
  *   - full:        delete all of the entity's rows first, then insert
- *                  everything from the import. (0.9.1)
+ *                  everything from the import. (0.9.1) Since 0.9.6 the
+ *                  payload is validated before anything is deleted, and
+ *                  the wipe + insert runs inside a DB transaction.
  *
  * @package DigitOne_Events
  */
@@ -283,6 +285,74 @@ final class DigitOne_Events_Export_Import_Excel {
 	 * }
 	 */
 	public function run( array $payload, string $event_id, string $mode, bool $dry_run ) : array {
+		if ( $mode === 'full' && ! $dry_run ) {
+			return $this->run_full_commit( $payload, $event_id );
+		}
+		return $this->run_pass( $payload, $event_id, $mode, $dry_run );
+	}
+
+	/**
+	 * Full-mode commit, made atomic (0.9.6).
+	 *
+	 * Full mode deletes the event's existing data before inserting the
+	 * imported rows. Before 0.9.6 a failure partway through left the event
+	 * half-empty. Now:
+	 *
+	 *   1. Validate first: run the same pass as a dry run. If any row would
+	 *      fail (missing field, unresolved FK, bad date…), abort before a
+	 *      single row is deleted.
+	 *   2. Wrap the wipe + insert in a DB transaction. If anything still
+	 *      fails at commit time (DB rejects a row, PHP throws), roll back
+	 *      so the event keeps its previous data.
+	 *
+	 * An aborted run returns the usual report shape plus `aborted => true`
+	 * and a human-readable `message`; nothing has been changed.
+	 */
+	private function run_full_commit( array $payload, string $event_id ) : array {
+		global $wpdb;
+
+		$preview = $this->run_pass( $payload, $event_id, 'full', true );
+		if ( $preview['totals']['errors'] > 0 ) {
+			$preview['dry_run'] = false;
+			$preview['aborted'] = true;
+			$preview['message'] = sprintf(
+				/* translators: %d number of rows with errors */
+				__( 'Import aborted: %d row(s) have errors. Nothing was deleted or changed. Fix the rows listed and try again.', 'digitone-events' ),
+				$preview['totals']['errors']
+			);
+			return $preview;
+		}
+
+		$wpdb->query( 'START TRANSACTION' );
+		try {
+			$report = $this->run_pass( $payload, $event_id, 'full', false );
+		} catch ( Throwable $e ) {
+			$wpdb->query( 'ROLLBACK' );
+			$preview['dry_run'] = false;
+			$preview['aborted'] = true;
+			$preview['message'] = sprintf(
+				/* translators: %s error message */
+				__( 'Import failed and was rolled back. Your existing data is unchanged. (%s)', 'digitone-events' ),
+				$e->getMessage()
+			);
+			return $preview;
+		}
+
+		if ( $report['totals']['errors'] > 0 ) {
+			$wpdb->query( 'ROLLBACK' );
+			$report['aborted'] = true;
+			$report['message'] = __( 'Import failed and was rolled back. Your existing data is unchanged.', 'digitone-events' );
+			return $report;
+		}
+
+		$wpdb->query( 'COMMIT' );
+		return $report;
+	}
+
+	/**
+	 * One import pass (preview or commit). See ::run().
+	 */
+	private function run_pass( array $payload, string $event_id, string $mode, bool $dry_run ) : array {
 		$results = [];
 
 		// Initialize result slots so per-entity counters always exist
